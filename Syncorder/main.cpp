@@ -4,48 +4,47 @@
 #include <memory>
 #include <string>
 
-#include "Syncorder/error/exception.h"
-#include <Syncorder/error/exception.cpp>
+#include <Syncorder/error/exception.h>
 #include <Syncorder/device/camera.cpp>
+#include <Syncorder/device/tobii.cpp>
 
-
-/**
- * @class main
- */
 
 int main() {
-    std::unique_ptr<BDevice> device = std::make_unique<CameraDevice>(0);
+    // Camera Device Test
+    std::unique_ptr<BDevice> camera_device = std::make_unique<CameraDevice>(0);
 
-    if (!device->init()) {
-        std::cout << "init() failed\n";
+    if (!camera_device->init()) {
+        std::cout << "Camera init() failed\n";
         return 1;
     }
 
-    if (!device->setup()) {
-        std::cout << "setup() failed\n";
+    if (!camera_device->setup()) {
+        std::cout << "Camera setup() failed\n";
         return 1;
     }
 
-    if (!device->warmup()) {
-        std::cout << "warmup() failed\n";
+    if (!camera_device->warmup()) {
+        std::cout << "Camera warmup() failed\n";
         return 1;
     }
 
-    if (!device->start()) {
-        std::cout << "start() failed\n";
+    if (!camera_device->start()) {
+        std::cout << "Camera start() failed\n";
         return 1;
     }
 
-    if (!device->stop()) {
-        std::cout << "stop() failed\n";
+    if (!camera_device->stop()) {
+        std::cout << "Camera stop() failed\n";
         return 1;
     }
 
-    if (!device->cleanup()) {;
-        std::cout << "Device stopped and cleaned up\n";
+    if (!camera_device->cleanup()) {
+        std::cout << "Camera cleanup() failed\n";
         return 1;
     }
 
-    std::cout << "clear\n";
+    std::cout << "Camera test completed\n";
+
+    std::cout << "All tests completed successfully\n";
     return 0;
-};
+}

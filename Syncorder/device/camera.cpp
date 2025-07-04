@@ -17,9 +17,8 @@
 
 using namespace Microsoft::WRL;
 
-#include <Syncorder/error/exception.cpp>
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/base.cpp>
+#include <Syncorder/device/base.h>
 
 
 /**
