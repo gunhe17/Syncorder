@@ -8,6 +8,7 @@ cl ^
   /O2 ^
   /D_CRT_SECURE_NO_WARNINGS ^
   /wd4819 ^
+  /I . ^
   Syncorder\main.cpp ^
   /Fe:bin\syncorder.exe ^
   /link ^

@@ -3,82 +3,49 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <thread>
 
-#include <windows.h>
-#include <wrl/client.h>
-#include <wrl/implements.h>
-#include <mfapi.h>
-#include <mfidl.h>
-#include <mfobjects.h>
-#include <mfreadwrite.h>
-#include <mferror.h>
-
-#pragma comment(lib, "mf.lib")
-#pragma comment(lib, "mfplat.lib")
-#pragma comment(lib, "mfreadwrite.lib")
-#pragma comment(lib, "mfuuid.lib")
-#pragma comment(lib, "ole32.lib")
-
-using namespace Microsoft::WRL;
-
+#include "Syncorder/error/exception.h"
 #include <Syncorder/error/exception.cpp>
-#include <Syncorder/error/exception.h>
+#include <Syncorder/device/camera.cpp>
 
 
 /**
- * @class (Base) Callback
+ * @class main
  */
 
-/**
- * @class () Callback
- */
+int main() {
+    std::unique_ptr<BDevice> device = std::make_unique<CameraDevice>(0);
 
-// Empty callback (비워진 콜백)s
-class EmptyCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> {
-public:
-    HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT, DWORD, DWORD, LONGLONG, IMFSample*) override {
-        // 비워진 콜백 - 아무 작업 안함
-        return S_OK;
+    if (!device->init()) {
+        std::cout << "init() failed\n";
+        return 1;
     }
-    
-    HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }
-    HRESULT STDMETHODCALLTYPE OnFlush(DWORD) override { return S_OK; }
-};
 
+    if (!device->setup()) {
+        std::cout << "setup() failed\n";
+        return 1;
+    }
 
+    if (!device->warmup()) {
+        std::cout << "warmup() failed\n";
+        return 1;
+    }
 
-/**
- * @class (Base) Device
- */
-class BDevice {
-protected:
-    int device_id_;
+    if (!device->start()) {
+        std::cout << "start() failed\n";
+        return 1;
+    }
 
-public:
-    BDevice(int device_id) 
-    :   device_id_(device_id)
-    {}
+    if (!device->stop()) {
+        std::cout << "stop() failed\n";
+        return 1;
+    }
 
-    virtual ~BDevice() {}
+    if (!device->cleanup()) {;
+        std::cout << "Device stopped and cleaned up\n";
+        return 1;
+    }
 
-    virtual bool init() final { EXCEPTION(return _init();) }
-
-    virtual bool setup() final { EXCEPTION(return _setup();) }
-
-    virtual bool warmup() final { EXCEPTION(return _warmup();) }
-
-    virtual bool start() final { EXCEPTION(return _start();) }
-
-    virtual bool stop() final { EXCEPTION(return _stop();) }
-
-    virtual bool cleanup() final { EXCEPTION(return _cleanup();) }
-
-protected:
-    virtual bool _init() = 0;
-    virtual bool _setup() = 0;
-    virtual bool _warmup() = 0;
-    virtual bool _start() = 0;
-    virtual bool _stop() = 0;
-    virtual bool _cleanup() = 0;
+    std::cout << "clear\n";
+    return 0;
 };
