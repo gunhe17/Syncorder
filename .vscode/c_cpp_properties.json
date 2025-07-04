@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "config",
+            "includePath": [
+                // project
+                "C:/Users/user/Workspace/Syncorder",
+                // include
+                "C:/Users/user/Workspace/ETW/EtwEnumerator/include",
+                "C:/Users/user/Workspace/TobiiPro/64/include",
+                "C:/Users/user/Workspace/evk_sdk/include"
+            ],
+            "defines": [
+                "_UNICODE",
+                "_DEBUG",
+                "UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}
