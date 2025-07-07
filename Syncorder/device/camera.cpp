@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+
+// installed
 #include <windows.h>
 #include <wrl/client.h>
 #include <wrl/implements.h>
@@ -17,19 +20,18 @@
 
 using namespace Microsoft::WRL;
 
+// local
 #include <Syncorder/error/exception.h>
 #include <Syncorder/device/base.h>
 
 
 /**
- * @class () Callback
+ * @class Callback
  */
-
-// Empty callback (비워진 콜백)s
 class EmptyCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> {
 public:
     HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT, DWORD, DWORD, LONGLONG, IMFSample*) override {
-        // 비워진 콜백 - 아무 작업 안함
+        std::cout << "something";
         return S_OK;
     }
     
@@ -41,9 +43,9 @@ public:
 /**
  * @class Device
  */
+
 class CameraDevice : public BDevice {
 private:
-   bool mf_initialized_;
    ComPtr<IMFActivate> device_;
    ComPtr<EmptyCallback> callback_;
    ComPtr<IMFSourceReader> reader_;
@@ -51,23 +53,19 @@ private:
 public:
     CameraDevice(int device_id)
     : 
-        BDevice(device_id), 
-        mf_initialized_(false) 
+        BDevice(device_id)
     {}
     
     ~CameraDevice() {
         cleanup();
     }
 
-public:  
-    bool _init() override {
-        _initializeMediaFoundation();
-
-        return true;
-    }
-    
+public:      
     bool _setup() override {
+        _startMF();
+
         device_ = _createDevice(device_id_);
+        callback_ = _createCallback();
         reader_ = _createSourceReader(device_, callback_);
 
         return true;
@@ -94,74 +92,107 @@ public:
         reader_.Reset();
         device_.Reset();
         callback_.Reset();
-        _shutdownMediaFoundation();
+        
+        _endMF();
 
         return true;
     }
 
 private:
-    void _initializeMediaFoundation() {
+    void _startMF() {
         HRESULT hr = MFStartup(MF_VERSION);
         if (FAILED(hr)) throw MediaFoundationError("MFStartup failed");
-        
-        mf_initialized_ = true;
     }
     
-    void _shutdownMediaFoundation() {
-        if (mf_initialized_) {
-            MFShutdown();
-            mf_initialized_ = false;
-        }
+    void _endMF() {
+        MFShutdown();
     }
     
     ComPtr<IMFActivate> _createDevice(int index) {
         HRESULT hr = S_OK;
-        
+
         ComPtr<IMFAttributes> attributes;
+
+        IMFActivate** devices_raw = nullptr;
+        UINT32 device_count = 0;
+
         hr = MFCreateAttributes(&attributes, 1);
         if (FAILED(hr)) throw MediaFoundationError("Device attributes creation failed");
-        
+
         hr = attributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
         if (FAILED(hr)) throw MediaFoundationError("Device attributes setup failed");
-        
-        IMFActivate** devices_raw = nullptr;
-        UINT32 count = 0;
-        hr = MFEnumDeviceSources(attributes.Get(), &devices_raw, &count);
+
+        // every device
+        hr = MFEnumDeviceSources(attributes.Get(), &devices_raw, &device_count);
         if (FAILED(hr)) throw MediaFoundationError("Device enumeration failed");
-        
-        if (index >= static_cast<int>(count)) {
-            CoTaskMemFree(devices_raw);
-            throw MediaFoundationError("Device index out of range");
-        }
-        
-        ComPtr<IMFActivate> device(devices_raw[index]);
+
+        IMFActivate* target_device = devices_raw[index];
+        ComPtr<IMFActivate> selected_device = target_device;
+
+        // validation
+        BOOL match = FALSE;
+        bool is_valid = std::any_of(
+            devices_raw, devices_raw + device_count,
+            [&](IMFActivate* dev) {
+                match = FALSE;
+                return SUCCEEDED(target_device->Compare(dev, MF_ATTRIBUTES_MATCH_INTERSECTION, &match)) && match;
+            }
+        );
+
         CoTaskMemFree(devices_raw);
-        
-        return device;
+
+        if (!is_valid) throw MediaFoundationError("Target device not matched in enumeration");
+
+        return selected_device;
+    }
+
+
+    ComPtr<EmptyCallback> _createCallback() {
+        return Microsoft::WRL::Make<EmptyCallback>();
     }
     
     ComPtr<IMFSourceReader> _createSourceReader(ComPtr<IMFActivate> device, ComPtr<IMFSourceReaderCallback> callback) {
         HRESULT hr = S_OK;
         
         ComPtr<IMFMediaSource> source;
+        ComPtr<IMFAttributes> attributes;
+        ComPtr<IMFSourceReader> reader;
+        ComPtr<IMFMediaType> type;
+
         hr = device->ActivateObject(IID_PPV_ARGS(&source));
         if (FAILED(hr)) throw MediaFoundationError("Device activation failed");
         
-        ComPtr<IMFAttributes> attributes;
         hr = MFCreateAttributes(&attributes, 1);
         if (FAILED(hr)) throw MediaFoundationError("Reader attributes creation failed");
         
         hr = attributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, callback.Get());
         if (FAILED(hr)) throw MediaFoundationError("Callback setup failed");
         
-        ComPtr<IMFSourceReader> reader;
         hr = MFCreateSourceReaderFromMediaSource(source.Get(), attributes.Get(), &reader);
         if (FAILED(hr)) throw MediaFoundationError("SourceReader creation failed");
-        
+
+        hr = MFCreateMediaType(&type);
+        if (FAILED(hr)) throw MediaFoundationError("Type creation failed");
+
+        type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_MJPG); //TODO: Config
+        type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
+        type->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
+
+        MFSetAttributeSize(type.Get(), MF_MT_FRAME_SIZE, 1280, 720); //TODO: Config
+        MFSetAttributeRatio(type.Get(), MF_MT_FRAME_RATE, 30, 1); //TODO: Config
+
+        hr = reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, NULL, type.Get());
+        if (FAILED(hr)) {
+            std::cout << "Type setting failed. HRESULT = 0x" << std::hex << hr;
+            throw MediaFoundationError("Type setting failed\n");
+        }
+
         return reader;
     }
 
     void _runSourceReader() {
-        return;
+        reader_->ReadSample(
+            MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr
+        );
     }
 };

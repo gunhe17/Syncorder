@@ -37,3 +37,23 @@ public:
 private:
     int code_;
 };
+
+class TobiiDeviceError : public std::runtime_error {
+public:
+    TobiiDeviceError(const std::string& msg) : std::runtime_error(msg) {}
+};
+
+class TobiiConnectionError : public TobiiDeviceError {
+public:
+    TobiiConnectionError(const std::string& msg) : TobiiDeviceError(msg) {}
+};
+
+class TobiiDisplayAreaError : public TobiiDeviceError {
+public:
+    TobiiDisplayAreaError(const std::string& msg) : TobiiDeviceError(msg) {}
+};
+
+class TobiiCalibrationError : public TobiiDeviceError {
+public:
+    TobiiCalibrationError(const std::string& msg) : TobiiDeviceError(msg) {}
+};

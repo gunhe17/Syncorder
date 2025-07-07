@@ -12,10 +12,6 @@ protected:
 public:
     BDevice(int device_id) : device_id_(device_id) {}
     virtual ~BDevice() {}
-
-    virtual bool init() final { 
-        EXCEPTION(return _init();) 
-    }
     
     virtual bool setup() final { 
         EXCEPTION(return _setup();) 
@@ -38,7 +34,6 @@ public:
     }
 
 protected:
-    virtual bool _init() = 0;
     virtual bool _setup() = 0;
     virtual bool _warmup() = 0;
     virtual bool _start() = 0;

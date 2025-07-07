@@ -11,12 +11,7 @@
 
 int main() {
     // Camera Device Test
-    std::unique_ptr<BDevice> camera_device = std::make_unique<CameraDevice>(0);
-
-    if (!camera_device->init()) {
-        std::cout << "Camera init() failed\n";
-        return 1;
-    }
+    std::unique_ptr<BDevice> camera_device = std::make_unique<CameraDevice>(1);
 
     if (!camera_device->setup()) {
         std::cout << "Camera setup() failed\n";
@@ -44,6 +39,36 @@ int main() {
     }
 
     std::cout << "Camera test completed\n";
+
+    // Tobii Device test
+    std::unique_ptr<BDevice> tobii_device = std::make_unique<TobiiDevice>();
+
+    if (!tobii_device->setup()) {
+        std::cout << "Tobii setup() failed\n";
+        return 1;
+    }
+
+    if (!tobii_device->warmup()) {
+        std::cout << "Tobii warmup() failed\n";
+        return 1;
+    }
+
+    if (!tobii_device->start()) {
+        std::cout << "Tobii start() failed\n";
+        return 1;
+    }
+
+    if (!tobii_device->stop()) {
+        std::cout << "Tobii stop() failed\n";
+        return 1;
+    }
+
+    if (!tobii_device->cleanup()) {
+        std::cout << "Tobii cleanup() failed\n";
+        return 1;
+    }
+
+    std::cout << "Tobii test completed\n";
 
     std::cout << "All tests completed successfully\n";
     return 0;
