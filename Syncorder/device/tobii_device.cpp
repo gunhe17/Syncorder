@@ -131,7 +131,7 @@ private:
             devices->count == 0 ||
             !devices
         )
-            throw TobiiConnectionError("No eye trackers found");
+            throw ArducamDeviceError("No eye trackers found");
 
         TobiiResearchEyeTracker* device = devices->eyetrackers[0];
         tobii_research_free_eyetrackers(devices);
@@ -166,27 +166,27 @@ private:
         TobiiResearchStatus status;
         
         status = tobii_research_get_display_area(device_, &display_area_);
-        if (status != TOBII_RESEARCH_STATUS_OK) throw TobiiDisplayAreaError("Failed to get display area");
+        if (status != TOBII_RESEARCH_STATUS_OK) throw ArducamDeviceError("Failed to get display area");
         
         status = tobii_research_set_display_area(device_, &display_area_);
-        if (status != TOBII_RESEARCH_STATUS_OK) throw TobiiDisplayAreaError("Failed to set display area");
+        if (status != TOBII_RESEARCH_STATUS_OK) throw ArducamDeviceError("Failed to set display area");
     }
     
     void _loadCalibration() {
         // TODO: GONFIG
         FILE* f = fopen("bin/calibration.bin", "rb");
-        if (!f) throw TobiiCalibrationError("Failed to open calibration file");
+        if (!f) throw ArducamDeviceError("Failed to open calibration file");
 
         fseek(f, 0, SEEK_END);
         size_t size = ftell(f);
         rewind(f);
-        if (size == 0) { fclose(f); throw TobiiCalibrationError("Calibration file is empty"); }
+        if (size == 0) { fclose(f); throw ArducamDeviceError("Calibration file is empty"); }
 
         void* buffer = malloc(size);
         if (fread(buffer, 1, size, f) != size) {
             free(buffer);
             fclose(f);
-            throw TobiiCalibrationError("Failed to read calibration file");
+            throw ArducamDeviceError("Failed to read calibration file");
         }
 
         fclose(f);
@@ -196,7 +196,7 @@ private:
         free(buffer);
 
         if (status != TOBII_RESEARCH_STATUS_OK)
-            throw TobiiCalibrationError("Failed to apply calibration data");
+            throw ArducamDeviceError("Failed to apply calibration data");
 
         calibration_loaded_ = true;
     }
