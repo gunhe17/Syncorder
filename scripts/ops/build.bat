@@ -10,13 +10,19 @@ cl ^
   /wd4819 ^
   /I . ^
   /I "C:\Users\user\Workspace\TobiiPro\64\include" ^
+  /I "C:\Users\user\Workspace\evk_sdk\include" ^
+  /I "C:\Users\user\Workspace\Intel RealSense SDK 2.0\include" ^
   Syncorder\main.cpp ^
   /Fe:bin\syncorder.exe ^
   /link ^
   /LIBPATH:"C:\Users\user\Workspace\TobiiPro\64\lib" ^
+  /LIBPATH:"C:\Users\user\Workspace\evk_sdk\lib" ^
+  /LIBPATH:"C:\Users\user\Workspace\Intel RealSense SDK 2.0\lib\x64" ^
   mf.lib ^
   mfplat.lib ^
   mfreadwrite.lib ^
   mfuuid.lib ^
   ole32.lib ^
-  tobii_research.lib
+  tobii_research.lib ^
+  arducam_evk_cpp_sdk.lib ^
+  realsense2.lib
