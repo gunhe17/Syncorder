@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <any>
 
 // installed
 #include <windows.h>
@@ -23,7 +24,6 @@ using namespace Microsoft::WRL;
 // local
 #include <Syncorder/error/exception.h>
 #include <Syncorder/device/base.h>
-#include <Syncorder/callback/base.h>
 
 
 /**
@@ -31,31 +31,34 @@ using namespace Microsoft::WRL;
  */
 
 class CameraDevice : public BDevice {
+private:
+    ComPtr<IMFActivate> device_;
+    ComPtr<IMFSourceReader> reader_;
+    
+    std::any callback_;
+
 public:
-    CameraDevice(
-        int device_id = 0,
-        std::unique_ptr<BCallback> callback = nullptr
-    )
+    CameraDevice(int device_id = 0)
     :
-        BDevice(device_id),
-        callback_(std::move(callback))
+        BDevice(device_id)
     {}
     
     ~CameraDevice() {
         cleanup();
     }
 
-private:
-    ComPtr<IMFActivate> device_;
-    ComPtr<IMFSourceReader> reader_;
-    std::unique_ptr<BCallback> callback_;
-
 public:      
     bool _setup() override {
         _startMF();
 
-        device_ = _createDevice(device_id_);
-        reader_ = _createSourceReader(device_, callback_);
+        device_ = _createDevice();
+        reader_ = _createSourceReader();
+
+        return true;
+    }
+
+    bool pre_setup(std::any callback) {
+        callback_ = callback;
 
         return true;
     }
@@ -98,7 +101,7 @@ private:
         MFShutdown();
     }
     
-    ComPtr<IMFActivate> _createDevice(int index) {
+    ComPtr<IMFActivate> _createDevice() {
         HRESULT hr = S_OK;
 
         ComPtr<IMFAttributes> attributes;
@@ -116,7 +119,12 @@ private:
         hr = MFEnumDeviceSources(attributes.Get(), &devices_raw, &device_count);
         if (FAILED(hr)) throw CameraDeviceError("Device enumeration failed");
 
-        IMFActivate* target_device = devices_raw[index];
+        if (device_id_ < 0 || device_id_ >= static_cast<int>(device_count)) {
+            CoTaskMemFree(devices_raw);
+            throw CameraDeviceError("Device index " + std::to_string(device_id_) + " out of range (0-" + std::to_string(device_count-1) + ")");
+        }
+        
+        IMFActivate* target_device = devices_raw[device_id_];
         ComPtr<IMFActivate> selected_device = target_device;
 
         // validation
@@ -136,10 +144,7 @@ private:
         return selected_device;
     }
     
-    ComPtr<IMFSourceReader> _createSourceReader(
-        ComPtr<IMFActivate> device, 
-        const std::unique_ptr<BCallback>& callback
-    ) {
+    ComPtr<IMFSourceReader> _createSourceReader() {
         HRESULT hr = S_OK;
         
         ComPtr<IMFMediaSource> source;
@@ -147,13 +152,16 @@ private:
         ComPtr<IMFSourceReader> reader;
         ComPtr<IMFMediaType> type;
 
-        hr = device->ActivateObject(IID_PPV_ARGS(&source));
+        hr = device_->ActivateObject(IID_PPV_ARGS(&source));
         if (FAILED(hr)) throw CameraDeviceError("Device activation failed");
         
         hr = MFCreateAttributes(&attributes, 1);
         if (FAILED(hr)) throw CameraDeviceError("Reader attributes creation failed");
         
-        hr = attributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, callback_->getComCallback());
+        // std::any -> COM
+        auto raw_callback = std::any_cast<IUnknown*>(callback_);
+
+        hr = attributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, raw_callback);
         if (FAILED(hr)) throw CameraDeviceError("Callback setup failed");
         
         hr = MFCreateSourceReaderFromMediaSource(source.Get(), attributes.Get(), &reader);

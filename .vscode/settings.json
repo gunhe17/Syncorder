@@ -80,6 +80,7 @@
         "random": "cpp",
         "array": "cpp",
         "cassert": "cpp",
-        "barrier": "cpp"
+        "barrier": "cpp",
+        "any": "cpp"
     }
 }
