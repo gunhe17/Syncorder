@@ -23,21 +23,7 @@ using namespace Microsoft::WRL;
 // local
 #include <Syncorder/error/exception.h>
 #include <Syncorder/device/base.h>
-
-
-/**
- * @class Callback
- */
-class EmptyCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> {
-public:
-    HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT, DWORD, DWORD, LONGLONG, IMFSample*) override {
-        std::cout << "something";
-        return S_OK;
-    }
-    
-    HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }
-    HRESULT STDMETHODCALLTYPE OnFlush(DWORD) override { return S_OK; }
-};
+#include <Syncorder/callback/base.h>
 
 
 /**
@@ -45,41 +31,42 @@ public:
  */
 
 class CameraDevice : public BDevice {
-private:
-   ComPtr<IMFActivate> device_;
-   ComPtr<EmptyCallback> callback_;
-   ComPtr<IMFSourceReader> reader_;
-
 public:
-    CameraDevice(int device_id)
-    : 
-        BDevice(device_id)
+    CameraDevice(
+        int device_id = 0,
+        std::unique_ptr<BCallback> callback = nullptr
+    )
+    :
+        BDevice(device_id),
+        callback_(std::move(callback))
     {}
     
     ~CameraDevice() {
         cleanup();
     }
 
+private:
+    ComPtr<IMFActivate> device_;
+    ComPtr<IMFSourceReader> reader_;
+    std::unique_ptr<BCallback> callback_;
+
 public:      
     bool _setup() override {
         _startMF();
 
         device_ = _createDevice(device_id_);
-        callback_ = _createCallback();
         reader_ = _createSourceReader(device_, callback_);
 
         return true;
     }
     
     bool _warmup() override {
-        // TODO: warm-up 로직 정의 필요
+        _runSourceReader();
 
         return true;
     }
     
     bool _start() override {
-        _runSourceReader();
-
         return true;
     }
     
@@ -88,20 +75,23 @@ public:
     }
     
     bool _cleanup() override {
-        // reverse
         reader_.Reset();
         device_.Reset();
-        callback_.Reset();
         
         _endMF();
 
         return true;
     }
 
+    // get
+    ComPtr<IMFSourceReader> getReader() {
+        return reader_;
+    }
+
 private:
     void _startMF() {
         HRESULT hr = MFStartup(MF_VERSION);
-        if (FAILED(hr)) throw MediaFoundationError("MFStartup failed");
+        if (FAILED(hr)) throw CameraDeviceError("MFStartup failed");
     }
     
     void _endMF() {
@@ -112,19 +102,19 @@ private:
         HRESULT hr = S_OK;
 
         ComPtr<IMFAttributes> attributes;
-
+        
         IMFActivate** devices_raw = nullptr;
         UINT32 device_count = 0;
 
         hr = MFCreateAttributes(&attributes, 1);
-        if (FAILED(hr)) throw MediaFoundationError("Device attributes creation failed");
+        if (FAILED(hr)) throw CameraDeviceError("Device attributes creation failed");
 
         hr = attributes->SetGUID(MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE, MF_DEVSOURCE_ATTRIBUTE_SOURCE_TYPE_VIDCAP_GUID);
-        if (FAILED(hr)) throw MediaFoundationError("Device attributes setup failed");
+        if (FAILED(hr)) throw CameraDeviceError("Device attributes setup failed");
 
         // every device
         hr = MFEnumDeviceSources(attributes.Get(), &devices_raw, &device_count);
-        if (FAILED(hr)) throw MediaFoundationError("Device enumeration failed");
+        if (FAILED(hr)) throw CameraDeviceError("Device enumeration failed");
 
         IMFActivate* target_device = devices_raw[index];
         ComPtr<IMFActivate> selected_device = target_device;
@@ -141,17 +131,15 @@ private:
 
         CoTaskMemFree(devices_raw);
 
-        if (!is_valid) throw MediaFoundationError("Target device not matched in enumeration");
+        if (!is_valid) throw CameraDeviceError("Target device not matched in enumeration");
 
         return selected_device;
     }
-
-
-    ComPtr<EmptyCallback> _createCallback() {
-        return Microsoft::WRL::Make<EmptyCallback>();
-    }
     
-    ComPtr<IMFSourceReader> _createSourceReader(ComPtr<IMFActivate> device, ComPtr<IMFSourceReaderCallback> callback) {
+    ComPtr<IMFSourceReader> _createSourceReader(
+        ComPtr<IMFActivate> device, 
+        const std::unique_ptr<BCallback>& callback
+    ) {
         HRESULT hr = S_OK;
         
         ComPtr<IMFMediaSource> source;
@@ -160,19 +148,19 @@ private:
         ComPtr<IMFMediaType> type;
 
         hr = device->ActivateObject(IID_PPV_ARGS(&source));
-        if (FAILED(hr)) throw MediaFoundationError("Device activation failed");
+        if (FAILED(hr)) throw CameraDeviceError("Device activation failed");
         
         hr = MFCreateAttributes(&attributes, 1);
-        if (FAILED(hr)) throw MediaFoundationError("Reader attributes creation failed");
+        if (FAILED(hr)) throw CameraDeviceError("Reader attributes creation failed");
         
-        hr = attributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, callback.Get());
-        if (FAILED(hr)) throw MediaFoundationError("Callback setup failed");
+        hr = attributes->SetUnknown(MF_SOURCE_READER_ASYNC_CALLBACK, callback_->getComCallback());
+        if (FAILED(hr)) throw CameraDeviceError("Callback setup failed");
         
         hr = MFCreateSourceReaderFromMediaSource(source.Get(), attributes.Get(), &reader);
-        if (FAILED(hr)) throw MediaFoundationError("SourceReader creation failed");
+        if (FAILED(hr)) throw CameraDeviceError("SourceReader creation failed");
 
         hr = MFCreateMediaType(&type);
-        if (FAILED(hr)) throw MediaFoundationError("Type creation failed");
+        if (FAILED(hr)) throw CameraDeviceError("Type creation failed");
 
         type->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_MJPG); //TODO: Config
         type->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
@@ -184,7 +172,7 @@ private:
         hr = reader->SetCurrentMediaType(MF_SOURCE_READER_FIRST_VIDEO_STREAM, NULL, type.Get());
         if (FAILED(hr)) {
             std::cout << "Type setting failed. HRESULT = 0x" << std::hex << hr;
-            throw MediaFoundationError("Type setting failed\n");
+            throw CameraDeviceError("Type setting failed\n");
         }
 
         return reader;

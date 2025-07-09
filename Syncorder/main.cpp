@@ -3,72 +3,33 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <thread>
 
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/camera.cpp>
-#include <Syncorder/device/tobii.cpp>
+// device
+#include <Syncorder/device/camera_device.cpp>
+#include <Syncorder/device/tobii_device.cpp>
+#include <Syncorder/device/realsense_device.cpp>
+// callback
+#include <Syncorder/callback/camera_callback.cpp>
 
 
 int main() {
-    // Camera Device Test
-    std::unique_ptr<BDevice> camera_device = std::make_unique<CameraDevice>(1);
+    /**
+     * Camera Device Test
+    */
+    auto camera_callback = Microsoft::WRL::Make<CameraCallback>();
+    auto camera_device = std::make_unique<CameraDevice>(3, std::unique_ptr<BCallback>(camera_callback.Get()));
 
-    if (!camera_device->setup()) {
-        std::cout << "Camera setup() failed\n";
-        return 1;
-    }
+    camera_device->setup();
+    camera_callback->setup(camera_device->getReader());
 
-    if (!camera_device->warmup()) {
-        std::cout << "Camera warmup() failed\n";
-        return 1;
-    }
+    camera_device->warmup();
 
-    if (!camera_device->start()) {
-        std::cout << "Camera start() failed\n";
-        return 1;
-    }
 
-    if (!camera_device->stop()) {
-        std::cout << "Camera stop() failed\n";
-        return 1;
-    }
-
-    if (!camera_device->cleanup()) {
-        std::cout << "Camera cleanup() failed\n";
-        return 1;
-    }
-
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    
     std::cout << "Camera test completed\n";
-
-    // Tobii Device test
-    std::unique_ptr<BDevice> tobii_device = std::make_unique<TobiiDevice>();
-
-    if (!tobii_device->setup()) {
-        std::cout << "Tobii setup() failed\n";
-        return 1;
-    }
-
-    if (!tobii_device->warmup()) {
-        std::cout << "Tobii warmup() failed\n";
-        return 1;
-    }
-
-    if (!tobii_device->start()) {
-        std::cout << "Tobii start() failed\n";
-        return 1;
-    }
-
-    if (!tobii_device->stop()) {
-        std::cout << "Tobii stop() failed\n";
-        return 1;
-    }
-
-    if (!tobii_device->cleanup()) {
-        std::cout << "Tobii cleanup() failed\n";
-        return 1;
-    }
-
-    std::cout << "Tobii test completed\n";
 
     std::cout << "All tests completed successfully\n";
     return 0;
