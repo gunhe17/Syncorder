@@ -160,8 +160,6 @@ private:
         
         auto func = reinterpret_cast<void(*)(TobiiResearchGazeData*, void*)>(gaze_);
         
-        std::cout << "[TobiiDevice] Starting gaze data subscription\n";
-        
         TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(device_, func, callback_);
         if (status != TOBII_RESEARCH_STATUS_OK) {
             throw TobiiDeviceError("Failed to subscribe to gaze data. Status: " + std::to_string(status));

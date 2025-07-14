@@ -35,8 +35,7 @@ int main() {
     camera_device->pre_setup(camera_callback->getIUnknown());
     camera_device->setup();
 
-    camera_callback->pre_setup(camera_device->getReader(), static_cast<void*>(camera_buffer.get()));
-    camera_callback->setup();
+    camera_callback->setup(camera_device->getReader(), static_cast<void*>(camera_buffer.get()));
 
     camera_device->warmup();
 

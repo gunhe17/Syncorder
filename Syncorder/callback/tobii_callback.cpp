@@ -64,28 +64,35 @@ private:
         bool right_valid, 
         int64_t timestamp
     ) {
+        if (buffer_) {
+            auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
+            TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
+            tobii_buffer->enqueue(std::move(data));
+        }
+
         std::cout << "_process() -> L:" << left_valid << " R:" << right_valid << std::endl;
         
-        // 항상 출력해서 데이터 확인
         printf("Timestamp: %lld | ", (long long)timestamp);
         printf("L:(%.3f,%.3f)[%s] ", left_x, left_y, left_valid ? "Valid" : "Invalid");
         printf("R:(%.3f,%.3f)[%s]", right_x, right_y, right_valid ? "Valid" : "Invalid");
         printf("\n");
         
-        // 유효한 데이터만 별도 처리
         if (left_valid || right_valid) {
             std::cout << "Tobii: Valid gaze data detected!" << std::endl;
         }
+    }
 
-        if (buffer_) {
-            auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
-            TobiiBufferData data(
-                left_x, left_y, right_x, right_y,
-                left_valid, right_valid,
-                std::chrono::system_clock::now(),
-                timestamp
-            );
-            tobii_buffer->enqueue(std::move(data));
-        }
+    TobiiBufferData _map(
+        double left_x, double left_y,
+        double right_x, double right_y,
+        bool left_valid, bool right_valid,
+        int64_t timestamp
+    ) {
+        return TobiiBufferData(
+            left_x, left_y, right_x, right_y,
+            left_valid, right_valid,
+            std::chrono::system_clock::now(),
+            timestamp
+        );
     }
 };

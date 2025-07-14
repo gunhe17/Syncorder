@@ -93,5 +93,7 @@ private:
         
         auto func = reinterpret_cast<void(*)(const rs2::frame&)>(callback_);
         pipe_.start(func);
+
+        std::cout << "[RealsenseDevice] Warmup completed\n";
     }
 };

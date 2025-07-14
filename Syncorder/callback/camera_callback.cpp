@@ -36,12 +36,10 @@ private:
     void* buffer_;
 
 public:
-    void pre_setup(ComPtr<IMFSourceReader> reader, void* buffer) {
+    void setup(ComPtr<IMFSourceReader> reader, void* buffer) {
         reader_ = reader;
         buffer_ = buffer;
     }
-
-    void setup() {}
 
     // get
     IUnknown* getIUnknown() {
