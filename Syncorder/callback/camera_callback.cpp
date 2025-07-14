@@ -20,7 +20,6 @@ using namespace Microsoft::WRL;
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/callback/base.h>
 
 
 /**
@@ -29,7 +28,6 @@ using namespace Microsoft::WRL;
 
 class CameraCallback
 : 
-    public BCallback, 
     public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> 
 {
 private:
@@ -55,7 +53,7 @@ public:
             MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr
         );
 
-        std::cout << "callback run\n";
+        std::cout << "Cam: callback run\n";
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }

@@ -1,6 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include <chrono>
+#include <any>
+#include <string>
+#include <atomic>
+#include <iostream>
 
 // installed
 #include "tobii_research.h"
@@ -15,178 +19,123 @@
 
 
 /**
- * @struct
- */
-struct TobiiGazeData {
-    std::chrono::system_clock::time_point timestamp_;
-    int64_t device_timestamp_;
-    
-    struct EyeData {
-        double x, y;
-        bool validity;
-        double pupil_diameter;
-    } left_eye_, right_eye_;
-    
-    struct Eye3DData {
-        double x, y, z;
-        bool validity;
-    } left_eye_3d_, right_eye_3d_;
-};
-
-
-/**
- * @class Callback
- */
-class TobiiCallback {
-public:
-    TobiiCallback() {}
-    ~TobiiCallback() {}
-    
-    void setGazeHandler(void* handler) { gaze_handler_ = handler; }
-    void setEyeImageHandler(void* handler) { eye_image_handler_ = handler; }
-    
-private:
-    void* gaze_handler_ = nullptr;
-    void* eye_image_handler_ = nullptr;
-};
-
-
-/**
- * @class Device
+ * @class TobiiDevice
  */
 
 class TobiiDevice : public BDevice {
 private:
     TobiiResearchEyeTracker* device_;
-    TobiiCallback* callback_;
     
-    // info
-    std::string address_;
-    std::string serial_number_;
-    std::string device_name_;
-    std::string model_;
-    
+    void* callback_;
+    void* gaze_;
+
     TobiiResearchDisplayArea display_area_;
-    
-    // calibration
-    bool calibration_loaded_;
-    std::string calibration_file_path_;
 
 public:
-    TobiiDevice()
+    TobiiDevice(int device_id = 0) 
     : 
-        BDevice(0)
+        BDevice(device_id)
     {}
     
     ~TobiiDevice() {
         cleanup();
     }
 
-public:    
+public:
+    bool pre_setup(void* callback, void* gaze) {
+        callback_ = callback;
+        gaze_ = gaze;
+
+        return true;
+    }
+    
     bool _setup() override {
         device_ = _createDevice();
-        callback_ = _createCallback();
 
         _loadDisplayArea();
         _loadCalibration();
-
+        
         return true;
     }
     
     bool _warmup() override {
+        _readSource();
+        
         return true;
     }
     
     bool _start() override {
-        _startStreaming();
-
         return true;
     }
     
     bool _stop() override {
-        _stopStreaming();
-
         return true;
     }
     
     bool _cleanup() override {
-        // reverse
-        device_ = nullptr;
-        if (callback_) {
-            delete callback_;
-            callback_ = nullptr;
-        }
         return true;
     }
 
-private:    
+    // get
+    TobiiResearchEyeTracker* getDevice() {
+        return device_;
+    }
+
+private:
     TobiiResearchEyeTracker* _createDevice() {
         TobiiResearchEyeTrackers* devices;
         TobiiResearchStatus status;
 
         status = tobii_research_find_all_eyetrackers(&devices);
 
-        if (
-            status != TOBII_RESEARCH_STATUS_OK ||
-            devices->count == 0 ||
-            !devices
-        )
-            throw ArducamDeviceError("No eye trackers found");
+        if (status != TOBII_RESEARCH_STATUS_OK || devices->count == 0 || !devices) {
+            throw TobiiDeviceError("No eye trackers found");
+        }
 
-        TobiiResearchEyeTracker* device = devices->eyetrackers[0];
+        if (device_id_ >= static_cast<int>(devices->count)) {
+            tobii_research_free_eyetrackers(devices);
+            throw TobiiDeviceError("Device index " + std::to_string(device_id_) + " out of range (0-" + std::to_string(devices->count-1) + ")");
+        }
+
+        TobiiResearchEyeTracker* device = devices->eyetrackers[device_id_];
         tobii_research_free_eyetrackers(devices);
-
-        // info
-        char* s = nullptr;
-
-        tobii_research_get_address(device, &s);
-        address_ = s ? s : "";
-        tobii_research_free_string(s);
-
-        tobii_research_get_serial_number(device, &s);
-        serial_number_ = s ? s : "";
-        tobii_research_free_string(s);
-
-        tobii_research_get_device_name(device, &s);
-        device_name_ = s ? s : "";
-        tobii_research_free_string(s);
-
-        tobii_research_get_model(device, &s);
-        model_ = s ? s : "";
-        tobii_research_free_string(s);
 
         return device;
     }
-
-    TobiiCallback* _createCallback() {
-        return new TobiiCallback();
-    }
-
+    
     void _loadDisplayArea() {
         TobiiResearchStatus status;
         
         status = tobii_research_get_display_area(device_, &display_area_);
-        if (status != TOBII_RESEARCH_STATUS_OK) throw ArducamDeviceError("Failed to get display area");
+        if (status != TOBII_RESEARCH_STATUS_OK) {
+            throw TobiiDeviceError("Failed to get display area");
+        }
         
         status = tobii_research_set_display_area(device_, &display_area_);
-        if (status != TOBII_RESEARCH_STATUS_OK) throw ArducamDeviceError("Failed to set display area");
+        if (status != TOBII_RESEARCH_STATUS_OK) {
+            throw TobiiDeviceError("Failed to set display area");
+        }
     }
     
     void _loadCalibration() {
-        // TODO: GONFIG
+        // TODO: Config에서 경로 읽기
         FILE* f = fopen("bin/calibration.bin", "rb");
-        if (!f) throw ArducamDeviceError("Failed to open calibration file");
 
         fseek(f, 0, SEEK_END);
         size_t size = ftell(f);
         rewind(f);
-        if (size == 0) { fclose(f); throw ArducamDeviceError("Calibration file is empty"); }
+        
+        if (size == 0) { 
+            fclose(f); 
+            std::cout << "Warning: Calibration file is empty, skipping\n";
+            return;
+        }
 
         void* buffer = malloc(size);
         if (fread(buffer, 1, size, f) != size) {
             free(buffer);
             fclose(f);
-            throw ArducamDeviceError("Failed to read calibration file");
+            throw TobiiDeviceError("Failed to read calibration file");
         }
 
         fclose(f);
@@ -195,17 +144,21 @@ private:
         TobiiResearchStatus status = tobii_research_apply_calibration_data(device_, &data);
         free(buffer);
 
-        if (status != TOBII_RESEARCH_STATUS_OK)
-            throw ArducamDeviceError("Failed to apply calibration data");
+        if (status != TOBII_RESEARCH_STATUS_OK) {
+            throw TobiiDeviceError("Failed to apply calibration data");
+        }
+    }
 
-        calibration_loaded_ = true;
-    }
-    
-    void _startStreaming() {
-        // Start streaming logic (추후 구현)
-    }
-    
-    void _stopStreaming() {
-        // Stop streaming logic (추후 구현)
+    void _readSource() {
+        if (gaze_) {  // callback_ 대신 gaze_ 사용
+            auto func = reinterpret_cast<void(*)(TobiiResearchGazeData*, void*)>(gaze_);
+            
+            std::cout << "gaze_ address: " << gaze_ << std::endl;
+            std::cout << "func address: " << (void*)func << std::endl;
+            
+            // callback_ 인스턴스를 user_data로 전달
+            TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(device_, func, callback_);
+            std::cout << "Subscription status: " << status << std::endl;
+        }
     }
 };

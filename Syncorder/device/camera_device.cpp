@@ -64,7 +64,7 @@ public:
     }
     
     bool _warmup() override {
-        _runSourceReader();
+        _readSource();
 
         return true;
     }
@@ -186,7 +186,7 @@ private:
         return reader;
     }
 
-    void _runSourceReader() {
+    void _readSource() {
         reader_->ReadSample(
             MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr
         );
