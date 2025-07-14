@@ -4,8 +4,12 @@
 #include <windows.h>
 
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/base.h>
+#include <Syncorder/device/common/base.h>
 
+
+/**
+ * @class Device
+ */
 
 class ArduDevice : public BDevice {
 private:

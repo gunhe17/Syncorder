@@ -23,7 +23,7 @@ using namespace Microsoft::WRL;
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/base.h>
+#include <Syncorder/device/common/base.h>
 
 
 /**
@@ -187,8 +187,18 @@ private:
     }
 
     void _readSource() {
-        reader_->ReadSample(
+        if (!callback_.has_value()) {
+            throw CameraDeviceError("Callback not set before warmup");
+        }
+        
+        HRESULT hr = reader_->ReadSample(
             MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr
         );
+        
+        if (FAILED(hr)) {
+            throw CameraDeviceError("Failed to start reading samples. HRESULT: " + std::to_string(hr));
+        }
+        
+        std::cout << "[CameraDevice] Warmup completed\n";
     }
 };

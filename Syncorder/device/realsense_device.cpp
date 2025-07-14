@@ -8,7 +8,7 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/base.h>
+#include <Syncorder/device/common/base.h>
 
 
 /**
@@ -47,14 +47,7 @@ public:
     }
     
     bool _warmup() override {
-        if (!callback_) {
-            throw RealsenseDeviceError("Callback not set before warmup");
-        }
-        
-        auto func = reinterpret_cast<void(*)(const rs2::frame&)>(callback_);
-        pipe_.start(func);
-        
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        _readSource();
         
         return true;
     }
@@ -91,5 +84,14 @@ private:
         if (device_id_ >= static_cast<int>(device_list.size())) {
             throw RealsenseDeviceError("Device index " + std::to_string(device_id_) + " out of range (0-" + std::to_string(device_list.size()-1) + ")");
         }
+    }
+
+    void _readSource() {
+        if (!callback_) {
+            throw RealsenseDeviceError("Callback not set before warmup");
+        }
+        
+        auto func = reinterpret_cast<void(*)(const rs2::frame&)>(callback_);
+        pipe_.start(func);
     }
 };

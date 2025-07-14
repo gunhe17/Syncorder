@@ -15,7 +15,7 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/base.h>
+#include <Syncorder/device/common/base.h>
 
 
 /**
@@ -150,15 +150,23 @@ private:
     }
 
     void _readSource() {
-        if (gaze_) {  // callback_ 대신 gaze_ 사용
-            auto func = reinterpret_cast<void(*)(TobiiResearchGazeData*, void*)>(gaze_);
-            
-            std::cout << "gaze_ address: " << gaze_ << std::endl;
-            std::cout << "func address: " << (void*)func << std::endl;
-            
-            // callback_ 인스턴스를 user_data로 전달
-            TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(device_, func, callback_);
-            std::cout << "Subscription status: " << status << std::endl;
+        if (!callback_) {
+            throw TobiiDeviceError("Callback not set before warmup");
         }
+        
+        if (!gaze_) {
+            throw TobiiDeviceError("Gaze callback not set before warmup");
+        }
+        
+        auto func = reinterpret_cast<void(*)(TobiiResearchGazeData*, void*)>(gaze_);
+        
+        std::cout << "[TobiiDevice] Starting gaze data subscription\n";
+        
+        TobiiResearchStatus status = tobii_research_subscribe_to_gaze_data(device_, func, callback_);
+        if (status != TOBII_RESEARCH_STATUS_OK) {
+            throw TobiiDeviceError("Failed to subscribe to gaze data. Status: " + std::to_string(status));
+        }
+        
+        std::cout << "[TobiiDevice] Warmup completed\n";
     }
 };

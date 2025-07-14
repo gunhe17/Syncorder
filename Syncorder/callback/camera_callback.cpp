@@ -19,6 +19,7 @@
 using namespace Microsoft::WRL;
 
 // local
+#include <Syncorder/buffer/camera_buffer.cpp>
 #include <Syncorder/error/exception.h>
 
 
@@ -32,15 +33,15 @@ class CameraCallback
 {
 private:
     ComPtr<IMFSourceReader> reader_;
+    void* buffer_;
 
 public:
-    void pre_setup(ComPtr<IMFSourceReader> reader) {
+    void pre_setup(ComPtr<IMFSourceReader> reader, void* buffer) {
         reader_ = reader;
+        buffer_ = buffer;
     }
 
-    void setup() {
-        
-    }
+    void setup() {}
 
     // get
     IUnknown* getIUnknown() {
@@ -48,14 +49,26 @@ public:
     }
 
 public:
-    HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT, DWORD, DWORD, LONGLONG, IMFSample*) override {
-        reader_->ReadSample(
-            MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr
-        );
-
+    HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT hr, DWORD, DWORD, LONGLONG timestamp, IMFSample* sample) override {
+        if (buffer_ && sample) {
+            auto* cam_buffer = static_cast<CameraBuffer*>(buffer_);
+            CameraBufferData data = _map(sample, timestamp);
+            cam_buffer->enqueue(std::move(data));
+        }
+        
+        reader_->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr);
         std::cout << "Cam: callback run\n";
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }
     HRESULT STDMETHODCALLTYPE OnFlush(DWORD) override { return S_OK; }
+
+private: 
+    CameraBufferData _map(IMFSample* sample, LONGLONG ts) {
+        return CameraBufferData(
+            ComPtr<IMFSample>(sample),
+            std::chrono::system_clock::now(),
+            ts
+        );
+    }
 };
