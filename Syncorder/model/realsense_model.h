@@ -1,6 +1,7 @@
 #pragma once
 
 // installed
+#include <chrono>
 #include <librealsense2/rs.hpp>
 
 
@@ -16,27 +17,41 @@ struct RealsenseBufferData {
     
     // time
     std::chrono::system_clock::time_point sys_time_;
-    double rs_timestamp_;
+    double device_timestamp_;
     
     // metadata
-    int frame_number_;
-    rs2_timestamp_domain timestamp_domain_;
+    uint64_t frame_number_;
+    bool has_depth_;
+    bool has_color_;
     
 public:
-    RealsenseBufferData() {}
+    RealsenseBufferData()
+    : 
+        has_depth_(false), 
+        has_color_(false), 
+        frame_number_(0) 
+    {}
+
     RealsenseBufferData(
         rs2::frameset frameset,
         std::chrono::system_clock::time_point sys_time,
-        double rs_timestamp,
-        int frame_number = 0,
-        rs2_timestamp_domain timestamp_domain = RS2_TIMESTAMP_DOMAIN_HARDWARE_CLOCK
+        double device_timestamp
     ) {
-        frameset_ = std::move(frameset);
-        color_frame_ = frameset_.get_color_frame();
-        depth_frame_ = frameset_.get_depth_frame();
+        frameset_ = frameset;
         sys_time_ = sys_time;
-        rs_timestamp_ = rs_timestamp;
-        frame_number_ = frame_number;
-        timestamp_domain_ = timestamp_domain;
+        device_timestamp_ = device_timestamp;
+        
+        // Extract frames
+        if (auto depth = frameset.get_depth_frame()) {
+            depth_frame_ = depth;
+            has_depth_ = true;
+        }
+        
+        if (auto color = frameset.get_color_frame()) {
+            color_frame_ = color;
+            has_color_ = true;
+        }
+        
+        frame_number_ = frameset.get_frame_number();
     }
 };

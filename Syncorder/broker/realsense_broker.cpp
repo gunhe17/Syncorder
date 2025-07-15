@@ -1,6 +1,5 @@
 #pragma once
 
-#include <any>
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -9,17 +8,17 @@
 // local
 #include <Syncorder/error/exception.h>
 #include <Syncorder/broker/common/base.h>
-#include <Syncorder/model/camera_model.h>
+#include <Syncorder/model/realsense_model.h>
 
 
 /**
  * @class Broker
  */
 
-class CameraBroker : public BaseBroker {
+class RealsenseBroker : public BaseBroker {
 public:
-    CameraBroker() {}
-    ~CameraBroker() {}
+    RealsenseBroker() {}
+    ~RealsenseBroker() {}
 
 protected:
     void _broker() override {
@@ -28,7 +27,7 @@ protected:
             return;
         }
 
-        typedef void* (*DequeueFunc)(void*);        
+        typedef void* (*DequeueFunc)(void*);
         auto dequeue_func = reinterpret_cast<DequeueFunc>(dequeue_);
 
         void* data = dequeue_func(buffer_);
@@ -43,8 +42,13 @@ protected:
 
 private:
     void _process(void* data) {
-        auto* camera_data = static_cast<CameraBufferData*>(data);
-        std::cout << "[CameraBroker] Processing timestamp: " << camera_data->mf_ts_ << std::endl;
-        delete camera_data;
+        auto* realsense_data = static_cast<RealsenseBufferData*>(data);
+        
+        std::cout << "[RealsenseBroker] Processing frame #" 
+                  << realsense_data->frame_number_ 
+                  << " (Depth: " << (realsense_data->has_depth_ ? "Yes" : "No")
+                  << ", Color: " << (realsense_data->has_color_ ? "Yes" : "No") << ")" << std::endl;
+        
+        delete realsense_data;
     }
 };

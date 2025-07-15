@@ -69,17 +69,6 @@ private:
             TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
             tobii_buffer->enqueue(std::move(data));
         }
-
-        std::cout << "_process() -> L:" << left_valid << " R:" << right_valid << std::endl;
-        
-        printf("Timestamp: %lld | ", (long long)timestamp);
-        printf("L:(%.3f,%.3f)[%s] ", left_x, left_y, left_valid ? "Valid" : "Invalid");
-        printf("R:(%.3f,%.3f)[%s]", right_x, right_y, right_valid ? "Valid" : "Invalid");
-        printf("\n");
-        
-        if (left_valid || right_valid) {
-            std::cout << "Tobii: Valid gaze data detected!" << std::endl;
-        }
     }
 
     TobiiBufferData _map(

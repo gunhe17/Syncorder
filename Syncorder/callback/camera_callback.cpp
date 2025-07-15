@@ -27,10 +27,7 @@ using namespace Microsoft::WRL;
  * @class Callback
  */
 
-class CameraCallback
-: 
-    public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> 
-{
+class CameraCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> {
 private:
     ComPtr<IMFSourceReader> reader_;
     
