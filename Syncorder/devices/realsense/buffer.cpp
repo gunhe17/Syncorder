@@ -12,8 +12,8 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/buffer/common/base.h>
-#include <Syncorder/model/realsense_model.h>
+#include <Syncorder/devices/common/buffer_base.h>
+#include <Syncorder/devices/realsense/model.h>
 
 
 /**

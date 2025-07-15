@@ -8,8 +8,8 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/broker/common/base.h>
-#include <Syncorder/model/tobii_model.h>
+#include <Syncorder/devices/common/broker_base.h>
+#include <Syncorder/devices/tobii/model.h>
 
 
 /**

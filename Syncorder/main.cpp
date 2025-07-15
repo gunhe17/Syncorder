@@ -8,24 +8,24 @@
 #include <Syncorder/error/exception.h>
 
 // device
-#include <Syncorder/device/camera_device.cpp>
-#include <Syncorder/device/tobii_device.cpp>
-#include <Syncorder/device/realsense_device.cpp>
+#include <Syncorder/devices/camera/device.cpp>
+#include <Syncorder/devices/tobii/device.cpp>
+#include <Syncorder/devices/realsense/device.cpp>
 
 // callback
-#include <Syncorder/callback/camera_callback.cpp>
-#include <Syncorder/callback/tobii_callback.cpp>
-#include <Syncorder/callback/realsense_callback.cpp>
+#include <Syncorder/devices/camera/callback.cpp>
+#include <Syncorder/devices/tobii/callback.cpp>
+#include <Syncorder/devices/realsense/callback.cpp>
 
 // buffer
-#include <Syncorder/buffer/camera_buffer.cpp>
-#include <Syncorder/buffer/tobii_buffer.cpp>
-#include <Syncorder/buffer/realsense_buffer.cpp>
+#include <Syncorder/devices/camera/buffer.cpp>
+#include <Syncorder/devices/tobii/buffer.cpp>
+#include <Syncorder/devices/realsense/buffer.cpp>
 
 // broker
-#include <Syncorder/broker/camera_broker.cpp>
-#include <Syncorder/broker/tobii_broker.cpp>
-#include <Syncorder/broker/realsense_broker.cpp>
+#include <Syncorder/devices/camera/broker.cpp>
+#include <Syncorder/devices/tobii/broker.cpp>
+#include <Syncorder/devices/realsense/broker.cpp>
 
 
 int main() {

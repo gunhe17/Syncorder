@@ -19,7 +19,7 @@
 using namespace Microsoft::WRL;
 
 // local
-#include <Syncorder/buffer/camera_buffer.cpp>
+#include <Syncorder/devices/camera/buffer.cpp> //TODO: include buffer
 #include <Syncorder/error/exception.h>
 
 

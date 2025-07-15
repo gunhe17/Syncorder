@@ -15,7 +15,7 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/device/common/base.h>
+#include <Syncorder/devices/common/device_base.h>
 
 
 /**

@@ -7,8 +7,8 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/broker/common/base.h>
-#include <Syncorder/model/realsense_model.h>
+#include <Syncorder/devices/common/broker_base.h>
+#include <Syncorder/devices/realsense/model.h>
 
 
 /**

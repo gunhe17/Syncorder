@@ -6,7 +6,7 @@
 #include "tobii_research_streams.h"
 
 // local
-#include <Syncorder/buffer/tobii_buffer.cpp>
+#include <Syncorder/devices/tobii/buffer.cpp> //TODO: include buffer
 #include <Syncorder/error/exception.h>
 
 

@@ -4,7 +4,7 @@
 #include <librealsense2/rs.hpp>
 
 // local
-#include <Syncorder/buffer/realsense_buffer.cpp>
+#include <Syncorder/devices/realsense/buffer.cpp> //TODO: include buffer
 #include <Syncorder/error/exception.h>
 
 

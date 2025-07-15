@@ -14,8 +14,8 @@ using namespace Microsoft::WRL;
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/buffer/common/base.h>
-#include <Syncorder/model/camera_model.h>
+#include <Syncorder/devices/common/buffer_base.h>
+#include <Syncorder/devices/camera/model.h>
 
 
 /**

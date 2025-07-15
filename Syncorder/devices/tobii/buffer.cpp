@@ -11,8 +11,8 @@
 
 // local
 #include <Syncorder/error/exception.h>
-#include <Syncorder/buffer/common/base.h>
-#include <Syncorder/model/tobii_model.h>
+#include <Syncorder/devices/common/buffer_base.h>
+#include <Syncorder/devices/tobii/model.h>
 
 
 /**
