@@ -33,6 +33,7 @@ class CameraCallback
 {
 private:
     ComPtr<IMFSourceReader> reader_;
+    
     void* buffer_;
 
 public:
@@ -55,7 +56,6 @@ public:
         }
         
         reader_->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr);
-        std::cout << "Cam: callback run\n";
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }

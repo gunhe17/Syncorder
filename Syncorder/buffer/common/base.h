@@ -1,4 +1,3 @@
-// base.h
 #pragma once
 
 #include <chrono>
@@ -30,7 +29,7 @@ public:
         return false;
     }
     
-    std::optional<T> dequeue() noexcept {
+    std::optional<T> _dequeue() noexcept {
         std::size_t current_tail = m_tail.load(std::memory_order_acquire);
         std::size_t current_head = m_head.load(std::memory_order_relaxed);
         
