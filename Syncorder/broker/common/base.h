@@ -7,7 +7,7 @@
  * @class Base Broker
  */
 
-class BaseBroker {
+class BBroker {
 protected:
     // buffer
     void* buffer_;
@@ -20,13 +20,13 @@ protected:
     std::thread processing_thread_;
 
 public:
-    BaseBroker() 
+    BBroker() 
     : 
         running_(false), 
         processed_count_(0) 
     {}
     
-    virtual ~BaseBroker() { stop(); }
+    virtual ~BBroker() { stop(); }
 
 public:
     void setup(void* buffer, void* dequeue) {
@@ -39,7 +39,7 @@ public:
         running_ = true;
 
         // thread
-        processing_thread_ = std::thread(&BaseBroker::_loop, this);
+        processing_thread_ = std::thread(&BBroker::_loop, this);
     }
 
     void stop() {
@@ -57,4 +57,31 @@ private:
     void _loop() {
         while (running_) _broker();
     }
+};
+
+template<typename DataType>
+class TBBroker : public BBroker {
+protected:
+    void _broker() override {
+        if (!buffer_ || !dequeue_) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            return;
+        }
+
+        typedef void* (*DequeueFunc)(void*);
+        auto dequeue_func = reinterpret_cast<DequeueFunc>(dequeue_);
+        void* raw_data = dequeue_func(buffer_);
+        
+        if (raw_data != nullptr) {
+            processed_count_++;
+            
+            std::unique_ptr<DataType> data(static_cast<DataType*>(raw_data));
+            _process(*data);
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+
+protected:
+    virtual void _process(const DataType& data) = 0;
 };
