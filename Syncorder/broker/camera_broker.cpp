@@ -9,6 +9,7 @@
 // local
 #include <Syncorder/error/exception.h>
 #include <Syncorder/broker/common/base.h>
+#include <Syncorder/model/camera_model.h>
 
 
 /**
@@ -56,8 +57,8 @@ protected:
 
 private:
     void _process(void* data) {
-        // 실제 processing class로 전달하는 로직
-        // 예: processor_->process(static_cast<CameraBufferData*>(data));
-        std::cout << "[CameraBroker] Data sent to processing class" << std::endl;
+        auto* camera_data = static_cast<CameraBufferData*>(data);
+        std::cout << "[CameraBroker] Processing timestamp: " << camera_data->mf_ts_ << std::endl;
+        delete camera_data;
     }
 };
