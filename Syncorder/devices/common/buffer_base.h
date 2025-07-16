@@ -6,6 +6,7 @@
 #include <optional>
 #include <iostream>
 
+
 template <typename T, std::size_t N>
 class BBuffer {
 protected:
@@ -13,11 +14,23 @@ protected:
     std::array<T, N> m_buff;
     std::atomic<std::size_t> m_tail;
 
+    std::atomic<bool> gate_{true};
+
 public:
-    constexpr BBuffer() noexcept : m_head(0), m_tail(0) {}
+    constexpr BBuffer() noexcept
+    : 
+        m_head(0), 
+        m_tail(0),
+        gate_(true)
+    {}
     virtual ~BBuffer() = default;
 
+public:
     bool enqueue(T val) noexcept {
+        // gate
+        if (gate_.load(std::memory_order_acquire)) return false;
+
+        // run
         std::size_t current_tail = m_tail.load(std::memory_order_relaxed);
         if (current_tail - m_head.load(std::memory_order_acquire) < N) {
             m_buff[current_tail % N] = std::move(val);
@@ -40,6 +53,14 @@ public:
         }
         
         return std::nullopt;
+    }
+
+    void run() {
+        gate_.store(false, std::memory_order_release);
+    }
+
+    void stop() {
+        gate_.store(true, std::memory_order_release);
     }
     
     std::size_t size() const noexcept {

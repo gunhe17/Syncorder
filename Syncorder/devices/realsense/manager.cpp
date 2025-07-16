@@ -48,10 +48,11 @@ public:
     }
     
     void run() override {
+        buffer_->run();
         broker_->run();
     }
 
     std::string __name__() const override {
-        return "Real-Sense";
+        return "Realsense";
     }
 };

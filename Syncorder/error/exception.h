@@ -9,12 +9,12 @@
  * @macro EXCEPTION - Exception handling wrapper
  */
 
-#define EXCEPTION(...)                      \
-    try {                                   \
-        __VA_ARGS__                         \
-    } catch (const std::exception& e) {     \
-        std::cout << "[Error] " << e.what(); \
-        return false;                       \
+#define EXCEPTION(...)                                  \
+    try {                                               \
+        __VA_ARGS__                                     \
+    } catch (const std::exception& e) {                 \
+        std::cout << "[Error] " << e.what() << "\n";    \
+        return false;                                   \
     }
 
 /**

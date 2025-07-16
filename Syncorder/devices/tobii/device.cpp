@@ -165,7 +165,5 @@ private:
         if (status != TOBII_RESEARCH_STATUS_OK) {
             throw TobiiDeviceError("Failed to subscribe to gaze data. Status: " + std::to_string(status));
         }
-        
-        std::cout << "[TobiiDevice] Warmup completed\n";
     }
 };

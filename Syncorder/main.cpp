@@ -24,12 +24,9 @@ int main() {
         syncorder.addTobii(0);
         syncorder.addRealsense(0);
         
-        std::cout << "\nRegistered " << syncorder.getDeviceCount() << " devices\n\n";
-        
+    
         // Start synchronization
         if (syncorder.start()) {
-            std::cout << "\nSynchronized recording started!\n";
-            
             // Simulate recording time
             std::this_thread::sleep_for(std::chrono::seconds(3));
             
@@ -40,7 +37,6 @@ int main() {
             syncorder.waitForCompletion();
             
             if (syncorder.getState() == Syncorder::State::COMPLETED) {
-                std::cout << "\nRecording completed successfully\n";
             } else {
                 std::cout << "\nRecording failed\n";
                 return -1;

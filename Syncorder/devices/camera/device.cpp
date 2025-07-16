@@ -198,7 +198,5 @@ private:
         if (FAILED(hr)) {
             throw CameraDeviceError("Failed to start reading samples. HRESULT: " + std::to_string(hr));
         }
-        
-        std::cout << "[CameraDevice] Warmup completed\n";
     }
 };

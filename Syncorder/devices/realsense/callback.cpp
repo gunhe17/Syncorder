@@ -42,24 +42,6 @@ private:
                 RealsenseBufferData data = _map(fs);
                 rs_buffer->enqueue(std::move(data));
             }
-            
-            auto color_frame = fs.get_color_frame();
-            auto depth_frame = fs.get_depth_frame();
-            
-            _print(color_frame, depth_frame);
-        }
-    }
-
-    void _print(const rs2::frame& color_frame, const rs2::frame& depth_frame) {
-        if (color_frame && depth_frame) {
-            auto color_vf = color_frame.as<rs2::video_frame>();
-            auto depth_vf = depth_frame.as<rs2::video_frame>();
-            
-            if (color_vf && depth_vf) {
-                std::cout << "RS: callback run - C:" << color_vf.get_width() << "x" << color_vf.get_height()
-                         << " D:" << depth_vf.get_width() << "x" << depth_vf.get_height() 
-                         << std::endl;
-            }
         }
     }
 

@@ -18,9 +18,6 @@
 class RealsenseBroker : public TBBroker<RealsenseBufferData> {
 protected:
     void _process(const RealsenseBufferData& data) override {
-        std::cout << "[RealsenseBroker] Processing frame #" 
-                  << data.frame_number_ 
-                  << " (Depth: " << (data.has_depth_ ? "Yes" : "No")
-                  << ", Color: " << (data.has_color_ ? "Yes" : "No") << ")" << std::endl;
+        std::cout << "[RealsenseBroker] Processing frame #" << data.frame_number_ << std::endl;
     }
 };

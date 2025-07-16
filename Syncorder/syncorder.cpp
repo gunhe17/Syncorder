@@ -95,24 +95,22 @@ public:
     
     void addManager(std::unique_ptr<BManager> manager) {
         if (state_.load() != State::IDLE) {
-            std::cout << "[Syncorder] Cannot add devices while running\n";
+            std::cout << "[ERROR] Cannot add devices while running\n";
             return;
         }
         
-        std::cout << "[Syncorder] Added " << manager->__name__() 
-                  << " (ID: " << "0" << ")\n";
+        std::cout << "[Syncorder] Added " << manager->__name__() << "\n";
         managers_.push_back(std::move(manager));
     }
-    
-    // Execution control
+
     bool start() {
         if (state_.load() != State::IDLE) {
-            std::cout << "[Syncorder] Already running or completed\n";
+            std::cout << "[ERROR] Already running or completed\n";
             return false;
         }
         
         if (managers_.empty()) {
-            std::cout << "[Syncorder] No devices registered\n";
+            std::cout << "[ERROR] No devices registered\n";
             _setState(State::FAILED);
             return false;
         }
@@ -122,7 +120,7 @@ public:
         
         return _initialize() && _runSynchronized();
     }
-    
+
     void stop() {
         stop_requested_.store(true);
         std::cout << "[Syncorder] Stop requested\n";
@@ -143,19 +141,18 @@ public:
 
 private:
     bool _initialize() {
-        std::size_t participant_count = managers_.size() + 1; // +1 for coordinator
+        std::size_t participant_count = managers_.size() + 1;
         
         try {
             for (int i = 0; i < NUM_STAGES; ++i) {
                 barriers_[i] = std::make_unique<SyncBarrier>(participant_count);
             }
             
-            std::cout << "[Syncorder] Initialized " << managers_.size() 
-                      << " devices (" << participant_count << " participants)\n";
+            std::cout << "[Syncorder] Initialized " << managers_.size() << " devices\n";
             return true;
             
         } catch (const std::exception& e) {
-            std::cout << "[Syncorder] Initialization failed: " << e.what() << "\n";
+            std::cout << "[ERROR] Initialization failed: " << e.what() << "\n";
             _setState(State::FAILED);
             return false;
         }
@@ -192,8 +189,7 @@ private:
             bool success = all_success.load() && coordinator_success;
             _setState(success ? State::COMPLETED : State::FAILED);
             
-            std::cout << "[Syncorder] Synchronization " 
-                      << (success ? "COMPLETED" : "FAILED") << "\n";
+            std::cout << "[Syncorder] " << (success ? "SUCCESS" : "FAILED") << "\n";
             
             return success;
             
@@ -209,36 +205,30 @@ private:
         try {
             // Setup phase
             if (!barriers_[SETUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[" << manager.__name__() << "] Setup timeout\n";
+                std::cout << "[ERROR] " << manager.__name__() << " setup timeout\n";
                 return false;
             }
             
             if (stop_requested_.load()) return false;
-            
             manager.setup();
-            std::cout << "[" << manager.__name__() << "] ✓ Setup\n";
             
             // Warmup phase
             if (!barriers_[WARMUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[" << manager.__name__() << "] Warmup timeout\n";
+                std::cout << "[ERROR] " << manager.__name__() << " warmup timeout\n";
                 return false;
             }
             
             if (stop_requested_.load()) return false;
-            
             manager.warmup();
-            std::cout << "[" << manager.__name__() << "] ✓ Warmup\n";
             
             // Run phase
             if (!barriers_[RUN]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[" << manager.__name__() << "] Run timeout\n";
+                std::cout << "[ERROR] " << manager.__name__() << " run timeout\n";
                 return false;
             }
             
             if (stop_requested_.load()) return false;
-            
             manager.run();
-            std::cout << "[" << manager.__name__() << "] ✓ Started\n";
             
             return true;
             
@@ -251,45 +241,39 @@ private:
     bool _coordinatorFlow() {
         try {
             // Setup coordination
-            std::cout << "[Coordinator] → Setup phase\n";
             if (!barriers_[SETUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[Coordinator] Setup timeout\n";
+                std::cout << "[ERROR] Setup phase timeout\n";
                 return false;
             }
             if (stop_requested_.load()) return false;
-            std::cout << "[Coordinator] ✓ All setup completed\n";
+            std::cout << "[Syncorder] Setup completed\n";
             
             // Warmup coordination
-            std::cout << "[Coordinator] → Warmup phase\n";
             if (!barriers_[WARMUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[Coordinator] Warmup timeout\n";
+                std::cout << "[ERROR] Warmup phase timeout\n";
                 return false;
             }
             if (stop_requested_.load()) return false;
-            std::cout << "[Coordinator] ✓ All warmup completed\n";
+            std::cout << "[Syncorder] Warmup completed\n";
             
             // Run coordination
-            std::cout << "[Coordinator] → Run phase\n";
             if (!barriers_[RUN]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[Coordinator] Run timeout\n";
+                std::cout << "[ERROR] Run phase timeout\n";
                 return false;
             }
             if (stop_requested_.load()) return false;
-            std::cout << "[Coordinator] *** ALL DEVICES STARTED ***\n";
+            std::cout << "[Syncorder] Recording started\n";
             
             return true;
             
         } catch (const std::exception& e) {
-            std::cout << "[Coordinator] Error: " << e.what() << "\n";
+            std::cout << "[ERROR] Coordinator: " << e.what() << "\n";
             return false;
         }
     }
     
     void _setState(State new_state) {
         state_.store(new_state);
-        
-        const char* state_names[] = {"IDLE", "RUNNING", "COMPLETED", "FAILED"};
-        std::cout << "[Syncorder] State: " << state_names[static_cast<int>(new_state)] << "\n";
     }
     
     void _cleanup() {

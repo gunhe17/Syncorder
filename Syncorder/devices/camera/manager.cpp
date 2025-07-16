@@ -48,6 +48,7 @@ public:
     }
     
     void run() override {
+        buffer_->run();
         broker_->run();
     }
 
