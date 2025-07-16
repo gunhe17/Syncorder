@@ -28,7 +28,7 @@ int main() {
         // Start synchronization
         if (syncorder.start()) {
             // Simulate recording time
-            std::this_thread::sleep_for(std::chrono::seconds(3));
+            std::this_thread::sleep_for(std::chrono::seconds(1));
             
             // Optional: stop early
             // syncorder.stop();

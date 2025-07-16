@@ -23,6 +23,6 @@ public:
 
 protected:
     void _process(const CameraBufferData& data) override {
-        std::cout << "[CameraBroker] Processing timestamp: " << data.mf_ts_ << std::endl;
+        std::cout << "[CameraBroker] Processing timestamp\n";
     }
 };

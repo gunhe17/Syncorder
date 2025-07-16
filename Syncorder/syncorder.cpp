@@ -255,6 +255,8 @@ private:
             }
             if (stop_requested_.load()) return false;
             std::cout << "[Syncorder] Warmup completed\n";
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
             
             // Run coordination
             if (!barriers_[RUN]->arrive_and_wait(default_timeout_)) {

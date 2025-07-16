@@ -4,6 +4,12 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <cstdlib>
+#include <fstream>
+#include <sstream>
+#include <vector>
 
 // local
 #include <Syncorder/error/exception.h>
@@ -16,8 +22,12 @@
  */
 
 class RealsenseBroker : public TBBroker<RealsenseBufferData> {
+public:
+    RealsenseBroker() {}
+    ~RealsenseBroker() {}
+
 protected:
     void _process(const RealsenseBufferData& data) override {
-        std::cout << "[RealsenseBroker] Processing frame #" << data.frame_number_ << std::endl;
+        std::cout << "[RealsenseBroker] Processing timestamp\n";
     }
 };

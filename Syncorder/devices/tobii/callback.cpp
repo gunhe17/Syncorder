@@ -17,8 +17,10 @@
 class TobiiCallback {
 private:
     static inline TobiiCallback* instance_ = nullptr;
-    
     void* buffer_;
+
+    // flag
+    std::atomic<bool> first_frame_received_;
 
 public:
     TobiiCallback() {}
@@ -27,8 +29,24 @@ public:
 public:
     void setup(void* buffer) {
         instance_ = this;
-
         buffer_ = buffer;
+    }
+
+    bool warmup() {
+        auto start = std::chrono::steady_clock::now();
+        auto end = std::chrono::milliseconds(10000);
+        
+        while (!first_frame_received_.load()) {
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (elapsed >= end) {
+                std::cout << "[ERROR] warmup timeout\n";
+                return false;
+            }
+        }
+        
+        std::cout << "[Tobii] warmup clear\n";
+
+        return true;
     }
 
     static void onGaze(TobiiResearchGazeData* gaze_data, void* user_data) {
@@ -40,37 +58,29 @@ public:
 
 private:
     void _onGaze(TobiiResearchGazeData* gaze_data) {
-        if (!gaze_data) return;
-        
+        // flag
+        if (!first_frame_received_.load()) first_frame_received_.store(true);
+
+        if (!gaze_data || !buffer_) return;
+
         bool left_valid = (gaze_data->left_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID);
         bool right_valid = (gaze_data->right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID);
-        
+
         double left_x = left_valid ? gaze_data->left_eye.gaze_point.position_on_display_area.x : -1.0;
         double left_y = left_valid ? gaze_data->left_eye.gaze_point.position_on_display_area.y : -1.0;
         double right_x = right_valid ? gaze_data->right_eye.gaze_point.position_on_display_area.x : -1.0;
         double right_y = right_valid ? gaze_data->right_eye.gaze_point.position_on_display_area.y : -1.0;
-        
+
         int64_t timestamp = gaze_data->device_time_stamp;
-        
-        _process(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
+
+        auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
+        TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
+        tobii_buffer->enqueue(std::move(data));
+
+        std::cout << "tobii callback - enqueue\n";
     }
 
-    void _process(
-        double left_x, 
-        double left_y, 
-        double right_x, 
-        double right_y, 
-        bool left_valid, 
-        bool right_valid, 
-        int64_t timestamp
-    ) {
-        if (buffer_) {
-            auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
-            TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
-            tobii_buffer->enqueue(std::move(data));
-        }
-    }
-
+private:
     TobiiBufferData _map(
         double left_x, double left_y,
         double right_x, double right_y,

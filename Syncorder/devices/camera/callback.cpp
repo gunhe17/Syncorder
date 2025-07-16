@@ -30,13 +30,38 @@ using namespace Microsoft::WRL;
 class CameraCallback : public RuntimeClass<RuntimeClassFlags<ClassicCom>, IMFSourceReaderCallback> {
 private:
     ComPtr<IMFSourceReader> reader_;
-    
     void* buffer_;
 
+    // flag
+    std::atomic<bool> first_frame_received_;
+
+public:
+    CameraCallback() {}
+    ~CameraCallback() {}
+    
 public:
     void setup(ComPtr<IMFSourceReader> reader, void* buffer) {
         reader_ = reader;
         buffer_ = buffer;
+
+        first_frame_received_.store(false);        
+    }
+
+    bool warmup() {
+        auto start = std::chrono::steady_clock::now();
+        auto end = std::chrono::milliseconds(10000);
+        
+        while (!first_frame_received_.load()) {
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (elapsed >= end) {
+                std::cout << "[ERROR] warmup timeout\n";
+                return false;
+            }
+        }
+        
+        std::cout << "[Camera] warmup clear\n";
+
+        return true;
     }
 
     // get
@@ -46,13 +71,20 @@ public:
 
 public:
     HRESULT STDMETHODCALLTYPE OnReadSample(HRESULT hr, DWORD, DWORD, LONGLONG timestamp, IMFSample* sample) override {
+        // flag
+        if (!first_frame_received_.load()) first_frame_received_.store(true);
+
+        // data
         if (buffer_ && sample) {
             auto* cam_buffer = static_cast<CameraBuffer*>(buffer_);
             CameraBufferData data = _map(sample, timestamp);
             cam_buffer->enqueue(std::move(data));
         }
         
+        // loop
         reader_->ReadSample(MF_SOURCE_READER_FIRST_VIDEO_STREAM, 0, nullptr, nullptr, nullptr, nullptr);
+
+        // return
         return S_OK;
     }
     HRESULT STDMETHODCALLTYPE OnEvent(DWORD, IMFMediaEvent*) override { return S_OK; }

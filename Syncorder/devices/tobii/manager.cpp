@@ -45,11 +45,12 @@ public:
     
     void warmup() override {
         device_->warmup();
+        callback_->warmup();
     }
     
     void run() override {
-        buffer_->run();
         broker_->run();
+        buffer_->run();
     }
 
     std::string __name__() const override {
