@@ -1,38 +1,60 @@
-#pragma once
+﻿#pragma once
 
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 
+// local
 #include <Syncorder/error/exception.h>
-
-#include <Syncorder/devices/camera/manager.cpp>
-#include <Syncorder/devices/realsense/manager.cpp>
-#include <Syncorder/devices/tobii/manager.cpp>
+#include <Syncorder/syncorder.cpp>
 
 
 int main() {
-    CameraManager camera_manager = CameraManager(2);
-
-    camera_manager.setup();
-    camera_manager.warmup();
-    camera_manager.run();
-
-    RealsenseManager realsense_manager = RealsenseManager(0);
-
-    realsense_manager.setup();
-    realsense_manager.warmup();
-    realsense_manager.run();
-
-    TobiiManager tobii_manager = TobiiManager(0);
-
-    tobii_manager.setup();
-    tobii_manager.warmup();
-    tobii_manager.run();
+    try {
+        std::cout << "=== Syncorder Multi-Device Recording ===\n\n";
+        
+        Syncorder syncorder;
+        
+        // Configuration
+        syncorder.setTimeout(std::chrono::milliseconds(3000));
+        
+        // Device registration
+        syncorder.addCamera(2);
+        syncorder.addTobii(0);
+        syncorder.addRealsense(0);
+        
+        std::cout << "\nRegistered " << syncorder.getDeviceCount() << " devices\n\n";
+        
+        // Start synchronization
+        if (syncorder.start()) {
+            std::cout << "\nSynchronized recording started!\n";
+            
+            // Simulate recording time
+            std::this_thread::sleep_for(std::chrono::seconds(3));
+            
+            // Optional: stop early
+            // syncorder.stop();
+            
+            // Wait for completion
+            syncorder.waitForCompletion();
+            
+            if (syncorder.getState() == Syncorder::State::COMPLETED) {
+                std::cout << "\nRecording completed successfully\n";
+            } else {
+                std::cout << "\nRecording failed\n";
+                return -1;
+            }
+            
+        } else {
+            std::cout << "\nFailed to start synchronization\n";
+            return -1;
+        }
+        
+    } catch (const std::exception& e) {
+        std::cout << "[ERROR] " << e.what() << "\n";
+        return -1;
+    }
     
-    
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::cout << "All tests completed successfully\n";
     return 0;
 }

@@ -15,4 +15,6 @@ public:
     virtual void setup() = 0;
     virtual void warmup() = 0;
     virtual void run() = 0;
+
+    virtual std::string __name__() const = 0;
 };

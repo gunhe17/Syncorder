@@ -50,4 +50,8 @@ public:
     void run() override {
         broker_->run();
     }
+
+    std::string __name__() const override {
+        return "Tobii";
+    }
 };
