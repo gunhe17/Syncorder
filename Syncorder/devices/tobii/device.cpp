@@ -120,6 +120,7 @@ private:
     void _loadCalibration() {
         // TODO: Config에서 경로 읽기
         FILE* f = fopen("bin/calibration.bin", "rb");
+        if (!f) return;
 
         fseek(f, 0, SEEK_END);
         size_t size = ftell(f);
