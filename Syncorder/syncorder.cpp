@@ -13,9 +13,9 @@
 #include <Syncorder/devices/common/manager_base.h>
 
 /**
- * SyncController Implementation
+ * Syncorder Implementation
  */
-class SyncController {
+class Syncorder {
 private:
     std::vector<std::unique_ptr<BManager>> devices_;
     std::atomic<bool> abort_flag_{false};
@@ -24,16 +24,16 @@ private:
 public:
     void addDevice(std::unique_ptr<BManager> device) {
         if (!device) {
-            std::cout << "[SyncController] Warning: null device ignored\n";
+            std::cout << "[Syncorder] Warning: null device ignored\n";
             return;
         }
         
-        std::cout << "[SyncController] Added device: " << device->__name__() << "\n";
+        std::cout << "[Syncorder] Added device: " << device->__name__() << "\n";
         devices_.push_back(std::move(device));
     }
     
     bool executeSetup() {
-        std::cout << "[SyncController] Starting setup phase...\n";
+        std::cout << "[Syncorder] Starting setup phase...\n";
         return executeStage("setup", [](BManager& device) {
             device.setup();
             return device.__is_setup__();
@@ -41,7 +41,7 @@ public:
     }
     
     bool executeWarmup() {
-        std::cout << "[SyncController] Starting warmup phase...\n";
+        std::cout << "[Syncorder] Starting warmup phase...\n";
         return executeStage("warmup", [](BManager& device) {
             device.warmup();
             return device.__is_warmup__();
@@ -49,7 +49,7 @@ public:
     }
     
     bool executeStart() {
-        std::cout << "[SyncController] Starting devices...\n";
+        std::cout << "[Syncorder] Starting devices...\n";
         return executeStage("start", [](BManager& device) {
             device.start();
             return device.__is_running__();
@@ -57,7 +57,7 @@ public:
     }
     
     void executeStop() {
-        std::cout << "[SyncController] Stopping all devices...\n";
+        std::cout << "[Syncorder] Stopping all devices...\n";
         std::vector<std::future<void>> futures;
         
         for (auto& device : devices_) {
@@ -77,7 +77,7 @@ public:
     }
     
     void executeCleanup() {
-        std::cout << "[SyncController] Cleaning up...\n";
+        std::cout << "[Syncorder] Cleaning up...\n";
         for (auto& device : devices_) {
             try {
                 device->cleanup();
@@ -89,14 +89,14 @@ public:
     }
     
     void abort() {
-        std::cout << "[SyncController] Abort requested\n";
+        std::cout << "[Syncorder] Abort requested\n";
         abort_flag_.store(true);
         executeStop();
     }
     
     void setTimeout(std::chrono::milliseconds timeout) {
         default_timeout_ = timeout;
-        std::cout << "[SyncController] Timeout set to " << timeout.count() << "ms\n";
+        std::cout << "[Syncorder] Timeout set to " << timeout.count() << "ms\n";
     }
     
     size_t getDeviceCount() const {
@@ -111,12 +111,12 @@ private:
     template<typename StageFunc>
     bool executeStage(const std::string& stage_name, StageFunc func) {
         if (abort_flag_.load()) {
-            std::cout << "[SyncController] Aborted during " << stage_name << "\n";
+            std::cout << "[Syncorder] Aborted during " << stage_name << "\n";
             return false;
         }
         
         if (devices_.empty()) {
-            std::cout << "[SyncController] No devices registered\n";
+            std::cout << "[Syncorder] No devices registered\n";
             return false;
         }
         
@@ -143,30 +143,29 @@ private:
         bool all_success = waitForAllFutures(futures, default_timeout_);
         
         if (!all_success) {
-            std::cout << "[SyncController] " << stage_name << " phase failed\n";
+            std::cout << "[Syncorder] " << stage_name << " phase failed\n";
             abort_flag_.store(true);
         } else {
-            std::cout << "[SyncController] " << stage_name << " phase completed successfully\n";
+            std::cout << "[Syncorder] " << stage_name << " phase completed successfully\n";
         }
         
         return all_success;
     }
     
     template<typename T>
-    bool waitForAllFutures(std::vector<std::future<T>>& futures, 
-                          std::chrono::milliseconds timeout) {
+    bool waitForAllFutures(std::vector<std::future<T>>& futures, std::chrono::milliseconds timeout) {
         auto deadline = std::chrono::steady_clock::now() + timeout;
         bool all_success = true;
         
         for (auto& future : futures) {
             auto remaining = deadline - std::chrono::steady_clock::now();
             if (remaining <= std::chrono::milliseconds(0)) {
-                std::cout << "[SyncController] Timeout waiting for completion\n";
+                std::cout << "[Syncorder] Timeout waiting for completion\n";
                 return false;
             }
             
             if (future.wait_for(remaining) == std::future_status::timeout) {
-                std::cout << "[SyncController] Device timeout\n";
+                std::cout << "[Syncorder] Device timeout\n";
                 return false;
             }
             
@@ -176,14 +175,14 @@ private:
                         all_success = false;
                     }
                 } catch (const std::exception& e) {
-                    std::cout << "[SyncController] Future exception: " << e.what() << "\n";
+                    std::cout << "[Syncorder] Future exception: " << e.what() << "\n";
                     all_success = false;
                 }
             } else {
                 try {
                     future.get();
                 } catch (const std::exception& e) {
-                    std::cout << "[SyncController] Future exception: " << e.what() << "\n";
+                    std::cout << "[Syncorder] Future exception: " << e.what() << "\n";
                 }
             }
         }

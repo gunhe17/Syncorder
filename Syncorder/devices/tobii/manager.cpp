@@ -53,6 +53,9 @@ public:
         buffer_->start();
     }
 
+    void stop() override {}
+    void cleanup() override {}
+
     std::string __name__() const override {
         return "Tobii";
     }
