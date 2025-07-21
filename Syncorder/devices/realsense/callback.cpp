@@ -65,8 +65,6 @@ private:
                 auto* rs_buffer = static_cast<RealsenseBuffer*>(buffer_);
                 RealsenseBufferData data = _map(fs);
                 rs_buffer->enqueue(std::move(data));
-
-                std::cout << "realsense callback - enqueue\n";
             }
         }
     }

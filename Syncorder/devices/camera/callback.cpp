@@ -76,8 +76,9 @@ public:
 
         // data
         if (buffer_ && sample) {
-            auto* cam_buffer = static_cast<CameraBuffer*>(buffer_);
             CameraBufferData data = _map(sample, timestamp);
+
+            auto* cam_buffer = static_cast<CameraBuffer*>(buffer_);
             cam_buffer->enqueue(std::move(data));
         }
         

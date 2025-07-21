@@ -35,7 +35,5 @@ public:
         sample_ = std::move(sample);
         sys_time_ = sys_time;
         mf_ts_ = mf_ts;
-        stream_index_ = stream_index;
-        flags_ = flags;
     }
 };

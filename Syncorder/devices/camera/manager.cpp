@@ -31,7 +31,7 @@ public:
         }
 
 public:
-    void setup() override {
+    bool setup() override {
         // device
         device_->pre_setup(callback_->getIUnknown());
         device_->setup();
@@ -41,20 +41,36 @@ public:
 
         // broker
         broker_->setup(buffer_.get(), reinterpret_cast<void*>(&CameraBuffer::dequeue));
+
+        // flag
+        is_setup_.store(true);
+
+        // return
+        return true;
     }
     
-    void warmup() override {
+    bool warmup() override {
         device_->warmup();
         callback_->warmup();
+
+        // flag
+        is_warmup_.store(true);
+
+        return true;
     }
     
-    void start() override {
+    bool start() override {
         broker_->start();
         buffer_->start();
+
+        // flag
+        is_running_.store(true);
+
+        return true;
     }
 
-    void stop() override {}
-    void cleanup() override {}
+    bool stop() override { return true; }
+    bool cleanup() override { return true; }
 
     std::string __name__() const override {
         return "Camera";

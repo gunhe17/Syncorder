@@ -13,79 +13,93 @@
 #include <Syncorder/devices/common/manager_base.h>
 
 /**
- * Syncorder Implementation
+ * @class
  */
+
 class Syncorder {
 private:
-    std::vector<std::unique_ptr<BManager>> devices_;
+    std::vector<std::unique_ptr<BManager>> managers_;
     std::atomic<bool> abort_flag_{false};
     std::chrono::milliseconds default_timeout_{5000};
     
 public:
-    void addDevice(std::unique_ptr<BManager> device) {
-        if (!device) {
-            std::cout << "[Syncorder] Warning: null device ignored\n";
+    void addDevice(std::unique_ptr<BManager> manager) {
+        if (!manager) {
+            std::cout << "[Syncorder] Warning: null manager ignored\n";
             return;
         }
         
-        std::cout << "[Syncorder] Added device: " << device->__name__() << "\n";
-        devices_.push_back(std::move(device));
+        std::cout << "[Syncorder] Added manager: " << manager->__name__() << "\n";
+        managers_.push_back(std::move(manager));
     }
     
     bool executeSetup() {
-        std::cout << "[Syncorder] Starting setup phase...\n";
-        return executeStage("setup", [](BManager& device) {
-            device.setup();
-            return device.__is_setup__();
+        std::cout << "[Syncorder] Coordinating setup phase...\n";
+        bool result = executeStage("setup", [](BManager& manager) {
+            manager.setup();
+            return manager.__is_setup__();
         });
+
+        std::cout << "[Syncorder] Setup phase " << (result ? "completed" : "failed") << "\n";
+        return result;
     }
     
     bool executeWarmup() {
-        std::cout << "[Syncorder] Starting warmup phase...\n";
-        return executeStage("warmup", [](BManager& device) {
-            device.warmup();
-            return device.__is_warmup__();
+        std::cout << "[Syncorder] Coordinating warmup phase...\n";
+        bool result = executeStage("warmup", [](BManager& manager) {
+            manager.warmup();
+            return manager.__is_warmup__();
         });
+
+        std::cout << "[Syncorder] Warmup phase " << (result ? "completed" : "failed") << "\n";
+        return result;
     }
     
     bool executeStart() {
-        std::cout << "[Syncorder] Starting devices...\n";
-        return executeStage("start", [](BManager& device) {
-            device.start();
-            return device.__is_running__();
+        std::cout << "[Syncorder] Coordinating start phase...\n";
+        bool result = executeStage("start", [](BManager& manager) {
+            manager.start();
+            return manager.__is_running__();
         });
+
+        std::cout << "[Syncorder] Start phase " << (result ? "completed" : "failed") << "\n";
+        return result;
     }
     
     void executeStop() {
-        std::cout << "[Syncorder] Stopping all devices...\n";
+        std::cout << "[Syncorder] Coordinating stop phase...\n";
         std::vector<std::future<void>> futures;
         
-        for (auto& device : devices_) {
+        for (auto& manager : managers_) {
             futures.push_back(
-                std::async(std::launch::async, [&device]() {
+                std::async(std::launch::async, [&manager]() {
                     try {
-                        device->stop();
-                        std::cout << "[" << device->__name__() << "] Stopped\n";
+                        manager->stop();
+                        std::cout << "[" << manager->__name__() << "] Manager stopped\n";
                     } catch (const std::exception& e) {
-                        std::cout << "[" << device->__name__() << "] Stop error: " << e.what() << "\n";
+                        std::cout << "[" << manager->__name__() << "] Stop error: " << e.what() << "\n";
                     }
                 })
             );
         }
         
         waitForAllFutures(futures, default_timeout_);
+
+        std::cout << "[Syncorder] Stop phase completed\n";
     }
     
     void executeCleanup() {
-        std::cout << "[Syncorder] Cleaning up...\n";
-        for (auto& device : devices_) {
+        std::cout << "[Syncorder] Coordinating cleanup phase...\n";
+        for (auto& manager : managers_) {
             try {
-                device->cleanup();
-                std::cout << "[" << device->__name__() << "] Cleaned up\n";
+                manager->cleanup();
+                std::cout << "[" << manager->__name__() << "] Manager cleaned up\n";
             } catch (const std::exception& e) {
-                std::cout << "[" << device->__name__() << "] Cleanup error: " << e.what() << "\n";
+                std::cout << "[" << manager->__name__() << "] Cleanup error: " << e.what() << "\n";
             }
         }
+
+        std::cout << "[Syncorder] Cleanup phase completed\n";
     }
     
     void abort() {
@@ -100,7 +114,7 @@ public:
     }
     
     size_t getDeviceCount() const {
-        return devices_.size();
+        return managers_.size();
     }
     
     bool isAborted() const {
@@ -115,25 +129,22 @@ private:
             return false;
         }
         
-        if (devices_.empty()) {
-            std::cout << "[Syncorder] No devices registered\n";
+        if (managers_.empty()) {
+            std::cout << "[Syncorder] No managers registered\n";
             return false;
         }
         
         std::vector<std::future<bool>> futures;
         
-        for (auto& device : devices_) {
+        for (auto& manager : managers_) {
             futures.push_back(
-                std::async(std::launch::async, [&device, &func, &stage_name]() {
+                std::async(std::launch::async, [&manager, &func, &stage_name]() {
                     try {
-                        std::cout << "[" << device->__name__() << "] " << stage_name << " started\n";
-                        bool success = func(*device);
-                        std::cout << "[" << device->__name__() << "] " << stage_name 
-                                 << (success ? " completed" : " failed") << "\n";
+                        bool success = func(*manager);
+
                         return success;
                     } catch (const std::exception& e) {
-                        std::cout << "[" << device->__name__() << "] " << stage_name 
-                                 << " error: " << e.what() << "\n";
+                        std::cout << "[" << manager->__name__() << "] Manager " << stage_name << " error: " << e.what() << "\n";
                         return false;
                     }
                 })
@@ -165,7 +176,7 @@ private:
             }
             
             if (future.wait_for(remaining) == std::future_status::timeout) {
-                std::cout << "[Syncorder] Device timeout\n";
+                std::cout << "[Syncorder] Manager timeout\n";
                 return false;
             }
             

@@ -12,11 +12,11 @@ public:
     virtual ~BManager() = default;
 
 public:
-    virtual void setup() = 0;
-    virtual void warmup() = 0;
-    virtual void start() = 0;
-    virtual void stop() = 0;
-    virtual void cleanup() = 0;
+    virtual bool setup() = 0;
+    virtual bool warmup() = 0;
+    virtual bool start() = 0;
+    virtual bool stop() = 0;
+    virtual bool cleanup() = 0;
 
     virtual std::string __name__() const = 0;
 

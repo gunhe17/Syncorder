@@ -76,8 +76,6 @@ private:
         auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
         TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
         tobii_buffer->enqueue(std::move(data));
-
-        std::cout << "tobii callback - enqueue\n";
     }
 
 private:
