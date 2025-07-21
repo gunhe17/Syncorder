@@ -3,285 +3,191 @@
 #include <vector>
 #include <thread>
 #include <memory>
-#include <array>
 #include <atomic>
 #include <iostream>
 #include <chrono>
-#include <mutex>
-#include <condition_variable>
+#include <future>
+#include <functional>
+#include <string>
 
-// local
 #include <Syncorder/devices/common/manager_base.h>
-#include <Syncorder/devices/camera/manager.cpp>
-#include <Syncorder/devices/realsense/manager.cpp>
-#include <Syncorder/devices/tobii/manager.cpp>
-
 
 /**
- * @class Barrier
+ * SyncController Implementation
  */
-
-class SyncBarrier {
+class SyncController {
 private:
-    std::mutex mutex_;
-    std::condition_variable cv_;
-    std::size_t count_;
-    std::size_t waiting_;
-    std::size_t generation_;
-
-public:
-    explicit SyncBarrier(std::size_t count) 
-        : count_(count), waiting_(0), generation_(0) {}
-    
-    bool arrive_and_wait(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        std::size_t current_generation = generation_;
-        ++waiting_;
-        
-        if (waiting_ == count_) {
-            waiting_ = 0;
-            ++generation_;
-            cv_.notify_all();
-            return true;
-        } else {
-            return cv_.wait_for(lock, timeout, [this, current_generation] {
-                return generation_ != current_generation;
-            });
-        }
-    }
-};
-
-
-/**
- * Syncorder
- */
-
- class Syncorder {
-public:
-    enum class State {
-        IDLE,
-        RUNNING,
-        COMPLETED,
-        FAILED
-    };
-
-private:
-    enum Stage { SETUP = 0, WARMUP = 1, RUN = 2, NUM_STAGES = 3 };
-    
-    // Core data
-    std::vector<std::unique_ptr<BManager>> managers_;
-    std::array<std::unique_ptr<SyncBarrier>, NUM_STAGES> barriers_;
-    
-    // State management
-    std::atomic<State> state_{State::IDLE};
-    std::atomic<bool> stop_requested_{false};
-    
-    // Configuration
+    std::vector<std::unique_ptr<BManager>> devices_;
+    std::atomic<bool> abort_flag_{false};
     std::chrono::milliseconds default_timeout_{5000};
-
+    
 public:
-    // Device registration
-    void addCamera(int device_id) {
-        addManager(std::make_unique<CameraManager>(device_id));
-    }
-    
-    void addTobii(int device_id) {
-        addManager(std::make_unique<TobiiManager>(device_id));
-    }
-    
-    void addRealsense(int device_id) {
-        addManager(std::make_unique<RealsenseManager>(device_id));
-    }
-    
-    void addManager(std::unique_ptr<BManager> manager) {
-        if (state_.load() != State::IDLE) {
-            std::cout << "[ERROR] Cannot add devices while running\n";
+    void addDevice(std::unique_ptr<BManager> device) {
+        if (!device) {
+            std::cout << "[SyncController] Warning: null device ignored\n";
             return;
         }
         
-        std::cout << "[Syncorder] Added " << manager->__name__() << "\n";
-        managers_.push_back(std::move(manager));
-    }
-
-    bool start() {
-        if (state_.load() != State::IDLE) {
-            std::cout << "[ERROR] Already running or completed\n";
-            return false;
-        }
-        
-        if (managers_.empty()) {
-            std::cout << "[ERROR] No devices registered\n";
-            _setState(State::FAILED);
-            return false;
-        }
-        
-        _setState(State::RUNNING);
-        stop_requested_.store(false);
-        
-        return _initialize() && _runSynchronized();
-    }
-
-    void stop() {
-        stop_requested_.store(true);
-        std::cout << "[Syncorder] Stop requested\n";
+        std::cout << "[SyncController] Added device: " << device->__name__() << "\n";
+        devices_.push_back(std::move(device));
     }
     
-    void waitForCompletion() {
-        while (state_.load() == State::RUNNING) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bool executeSetup() {
+        std::cout << "[SyncController] Starting setup phase...\n";
+        return executeStage("setup", [](BManager& device) {
+            device.setup();
+            return device.__is_setup__();
+        });
+    }
+    
+    bool executeWarmup() {
+        std::cout << "[SyncController] Starting warmup phase...\n";
+        return executeStage("warmup", [](BManager& device) {
+            device.warmup();
+            return device.__is_warmup__();
+        });
+    }
+    
+    bool executeStart() {
+        std::cout << "[SyncController] Starting devices...\n";
+        return executeStage("start", [](BManager& device) {
+            device.start();
+            return device.__is_running__();
+        });
+    }
+    
+    void executeStop() {
+        std::cout << "[SyncController] Stopping all devices...\n";
+        std::vector<std::future<void>> futures;
+        
+        for (auto& device : devices_) {
+            futures.push_back(
+                std::async(std::launch::async, [&device]() {
+                    try {
+                        device->stop();
+                        std::cout << "[" << device->__name__() << "] Stopped\n";
+                    } catch (const std::exception& e) {
+                        std::cout << "[" << device->__name__() << "] Stop error: " << e.what() << "\n";
+                    }
+                })
+            );
+        }
+        
+        waitForAllFutures(futures, default_timeout_);
+    }
+    
+    void executeCleanup() {
+        std::cout << "[SyncController] Cleaning up...\n";
+        for (auto& device : devices_) {
+            try {
+                device->cleanup();
+                std::cout << "[" << device->__name__() << "] Cleaned up\n";
+            } catch (const std::exception& e) {
+                std::cout << "[" << device->__name__() << "] Cleanup error: " << e.what() << "\n";
+            }
         }
     }
     
-    // State query
-    State getState() const { return state_.load(); }
-    size_t getDeviceCount() const { return managers_.size(); }
+    void abort() {
+        std::cout << "[SyncController] Abort requested\n";
+        abort_flag_.store(true);
+        executeStop();
+    }
     
-    // Configuration
-    void setTimeout(std::chrono::milliseconds timeout) { default_timeout_ = timeout; }
+    void setTimeout(std::chrono::milliseconds timeout) {
+        default_timeout_ = timeout;
+        std::cout << "[SyncController] Timeout set to " << timeout.count() << "ms\n";
+    }
+    
+    size_t getDeviceCount() const {
+        return devices_.size();
+    }
+    
+    bool isAborted() const {
+        return abort_flag_.load();
+    }
 
 private:
-    bool _initialize() {
-        std::size_t participant_count = managers_.size() + 1;
-        
-        try {
-            for (int i = 0; i < NUM_STAGES; ++i) {
-                barriers_[i] = std::make_unique<SyncBarrier>(participant_count);
-            }
-            
-            std::cout << "[Syncorder] Initialized " << managers_.size() << " devices\n";
-            return true;
-            
-        } catch (const std::exception& e) {
-            std::cout << "[ERROR] Initialization failed: " << e.what() << "\n";
-            _setState(State::FAILED);
+    template<typename StageFunc>
+    bool executeStage(const std::string& stage_name, StageFunc func) {
+        if (abort_flag_.load()) {
+            std::cout << "[SyncController] Aborted during " << stage_name << "\n";
             return false;
         }
+        
+        if (devices_.empty()) {
+            std::cout << "[SyncController] No devices registered\n";
+            return false;
+        }
+        
+        std::vector<std::future<bool>> futures;
+        
+        for (auto& device : devices_) {
+            futures.push_back(
+                std::async(std::launch::async, [&device, &func, &stage_name]() {
+                    try {
+                        std::cout << "[" << device->__name__() << "] " << stage_name << " started\n";
+                        bool success = func(*device);
+                        std::cout << "[" << device->__name__() << "] " << stage_name 
+                                 << (success ? " completed" : " failed") << "\n";
+                        return success;
+                    } catch (const std::exception& e) {
+                        std::cout << "[" << device->__name__() << "] " << stage_name 
+                                 << " error: " << e.what() << "\n";
+                        return false;
+                    }
+                })
+            );
+        }
+        
+        bool all_success = waitForAllFutures(futures, default_timeout_);
+        
+        if (!all_success) {
+            std::cout << "[SyncController] " << stage_name << " phase failed\n";
+            abort_flag_.store(true);
+        } else {
+            std::cout << "[SyncController] " << stage_name << " phase completed successfully\n";
+        }
+        
+        return all_success;
     }
     
-    bool _runSynchronized() {
-        std::vector<std::thread> device_threads;
-        std::atomic<bool> all_success{true};
+    template<typename T>
+    bool waitForAllFutures(std::vector<std::future<T>>& futures, 
+                          std::chrono::milliseconds timeout) {
+        auto deadline = std::chrono::steady_clock::now() + timeout;
+        bool all_success = true;
         
-        try {
-            // Start device threads
-            for (auto& manager : managers_) {
-                device_threads.emplace_back([this, &manager, &all_success]() {
-                    if (!_deviceFlow(*manager)) {
-                        all_success.store(false);
+        for (auto& future : futures) {
+            auto remaining = deadline - std::chrono::steady_clock::now();
+            if (remaining <= std::chrono::milliseconds(0)) {
+                std::cout << "[SyncController] Timeout waiting for completion\n";
+                return false;
+            }
+            
+            if (future.wait_for(remaining) == std::future_status::timeout) {
+                std::cout << "[SyncController] Device timeout\n";
+                return false;
+            }
+            
+            if constexpr (std::is_same_v<T, bool>) {
+                try {
+                    if (!future.get()) {
+                        all_success = false;
                     }
-                });
-            }
-            
-            // Run coordinator in current thread
-            bool coordinator_success = _coordinatorFlow();
-            if (!coordinator_success) {
-                all_success.store(false);
-            }
-            
-            // Wait for all threads
-            for (auto& thread : device_threads) {
-                if (thread.joinable()) {
-                    thread.join();
+                } catch (const std::exception& e) {
+                    std::cout << "[SyncController] Future exception: " << e.what() << "\n";
+                    all_success = false;
+                }
+            } else {
+                try {
+                    future.get();
+                } catch (const std::exception& e) {
+                    std::cout << "[SyncController] Future exception: " << e.what() << "\n";
                 }
             }
-            
-            // Set final state
-            bool success = all_success.load() && coordinator_success;
-            _setState(success ? State::COMPLETED : State::FAILED);
-            
-            std::cout << "[Syncorder] " << (success ? "SUCCESS" : "FAILED") << "\n";
-            
-            return success;
-            
-        } catch (const std::exception& e) {
-            std::cout << "[Syncorder] Runtime error: " << e.what() << "\n";
-            _setState(State::FAILED);
-            _cleanup();
-            return false;
         }
-    }
-    
-    bool _deviceFlow(BManager& manager) {
-        try {
-            // Setup phase
-            if (!barriers_[SETUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] " << manager.__name__() << " setup timeout\n";
-                return false;
-            }
-            
-            if (stop_requested_.load()) return false;
-            manager.setup();
-            
-            // Warmup phase
-            if (!barriers_[WARMUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] " << manager.__name__() << " warmup timeout\n";
-                return false;
-            }
-            
-            if (stop_requested_.load()) return false;
-            manager.warmup();
-            
-            // Run phase
-            if (!barriers_[RUN]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] " << manager.__name__() << " run timeout\n";
-                return false;
-            }
-            
-            if (stop_requested_.load()) return false;
-            manager.start();
-            
-            return true;
-            
-        } catch (const std::exception& e) {
-            std::cout << "[ERROR] " << manager.__name__() << ": " << e.what() << "\n";
-            return false;
-        }
-    }
-    
-    bool _coordinatorFlow() {
-        try {
-            // Setup coordination
-            if (!barriers_[SETUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] Setup phase timeout\n";
-                return false;
-            }
-            if (stop_requested_.load()) return false;
-            std::cout << "[Syncorder] Setup completed\n";
-            
-            // Warmup coordination
-            if (!barriers_[WARMUP]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] Warmup phase timeout\n";
-                return false;
-            }
-            if (stop_requested_.load()) return false;
-            std::cout << "[Syncorder] Warmup completed\n";
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-            
-            // Run coordination
-            if (!barriers_[RUN]->arrive_and_wait(default_timeout_)) {
-                std::cout << "[ERROR] Run phase timeout\n";
-                return false;
-            }
-            if (stop_requested_.load()) return false;
-            std::cout << "[Syncorder] Recording started\n";
-            
-            return true;
-            
-        } catch (const std::exception& e) {
-            std::cout << "[ERROR] Coordinator: " << e.what() << "\n";
-            return false;
-        }
-    }
-    
-    void _setState(State new_state) {
-        state_.store(new_state);
-    }
-    
-    void _cleanup() {
-        // Reset barriers
-        for (auto& barrier : barriers_) {
-            barrier.reset();
-        }
+        
+        return all_success;
     }
 };
