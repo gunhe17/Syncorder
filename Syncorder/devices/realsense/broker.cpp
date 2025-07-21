@@ -11,6 +11,7 @@
 #include <vector>
 
 // local
+#include <Syncorder/gonfig/gonfig.h>
 #include <Syncorder/error/exception.h>
 #include <Syncorder/devices/common/broker_base.h>
 #include <Syncorder/devices/realsense/model.h>
@@ -29,13 +30,21 @@ private:
 
 public:
     RealsenseBroker() {
-        output_ = std::filesystem::current_path().string() + "/output/realsense/";
+        output_ = gonfig.output_directory + "realsense/";
 
-       std::filesystem::create_directories(output_ + "color/");
-       std::filesystem::create_directories(output_ + "depth/");
+        std::filesystem::create_directories(output_);
+        std::filesystem::create_directories(output_ + "color/");
+        std::filesystem::create_directories(output_ + "depth/");
 
-       csv_.open(output_ + "realsense_data.csv");
-       csv_ << "system_time,device_timestamp,frame_number,has_depth,has_color,color_file,depth_file\n";
+        csv_.open(output_ + "realsense_data.csv");
+        csv_ 
+            << "system_time,"
+            << "device_timestamp,"
+            << "frame_number,"
+            << "has_depth,"
+            << "has_color,"
+            << "color_file,"
+            << "depth_file\n";
     }
     ~RealsenseBroker() {
         csv_.close();
@@ -43,14 +52,6 @@ public:
 
 public:
     void cleanup() {
-        std::cout << "cleanup() called\n";
-        std::cout << "[RealsenseBroker] raw_files_ size: " << raw_files_.size() << std::endl;
-        
-        // 벡터 내용 출력
-        for (const auto& file : raw_files_) {
-            std::cout << "[RealsenseBroker] File in vector: " << file << std::endl;
-        }
-        
         _convert();
     }
 protected:

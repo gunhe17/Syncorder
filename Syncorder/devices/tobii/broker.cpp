@@ -8,8 +8,10 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <filesystem>
 
 // local
+#include <Syncorder/gonfig/gonfig.h>
 #include <Syncorder/error/exception.h>
 #include <Syncorder/devices/common/broker_base.h>
 #include <Syncorder/devices/tobii/model.h>
@@ -22,10 +24,15 @@
 class TobiiBroker : public TBBroker<TobiiBufferData> {
 private:
     std::ofstream csv_;
+    std::string output_;
 
 public:
     TobiiBroker() {
-        csv_.open("tobii_data.csv");
+        output_ = gonfig.output_directory + "tobii/";
+
+        std::filesystem::create_directories(output_);
+
+        csv_.open(output_ + "tobii_data.csv");
         csv_
             <<"left_x,"
             <<"left_y,"
@@ -42,6 +49,9 @@ public:
             <<"validity_flags\n";
     }
     ~TobiiBroker() {}
+
+public:
+    void cleanup() {}
 
 protected:
     void _process(const TobiiBufferData& data) override {

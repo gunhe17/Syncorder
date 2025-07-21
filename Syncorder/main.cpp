@@ -5,6 +5,7 @@
 #include <thread>
 
 // local
+#include <Syncorder/gonfig/gonfig.h>
 #include <Syncorder/error/exception.h>
 #include <Syncorder/syncorder.cpp>
 #include <Syncorder/devices/camera/device.cpp>
@@ -14,7 +15,14 @@
 #include <Syncorder/devices/realsense/device.cpp>
 #include <Syncorder/devices/realsense/manager.cpp>
 
-int main() {
+
+/**
+ * @main
+ */
+
+int main(int argc, char* argv[]) {
+    gonfig = Config::parseArgs(argc, argv);
+
     try {
         std::cout << "=== Syncorder Multi-Device Recording ===\n\n";
         
@@ -24,7 +32,7 @@ int main() {
         
         // Device 등록
         std::cout << "Registering devices...\n";
-        syncorder.addDevice(std::make_unique<RealsenseManager>(0));
+        // syncorder.addDevice(std::make_unique<RealsenseManager>(0));
         syncorder.addDevice(std::make_unique<TobiiManager>(0));
         std::cout << "Registered " << syncorder.getDeviceCount() << " devices\n\n";
         
