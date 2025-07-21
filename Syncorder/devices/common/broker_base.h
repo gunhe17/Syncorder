@@ -35,7 +35,7 @@ public:
         dequeue_ = dequeue;
     }
 
-    void run() {
+    void start() {
         // flag
         running_ = true;
 

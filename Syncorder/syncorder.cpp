@@ -228,7 +228,7 @@ private:
             }
             
             if (stop_requested_.load()) return false;
-            manager.run();
+            manager.start();
             
             return true;
             

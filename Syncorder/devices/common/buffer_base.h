@@ -55,7 +55,7 @@ public:
         return std::nullopt;
     }
 
-    void run() {
+    void start() {
         gate_.store(false, std::memory_order_release);
     }
 

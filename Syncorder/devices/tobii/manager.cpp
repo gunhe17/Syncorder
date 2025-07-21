@@ -48,9 +48,9 @@ public:
         callback_->warmup();
     }
     
-    void run() override {
-        broker_->run();
-        buffer_->run();
+    void start() override {
+        broker_->start();
+        buffer_->start();
     }
 
     std::string __name__() const override {
