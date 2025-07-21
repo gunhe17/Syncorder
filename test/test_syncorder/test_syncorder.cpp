@@ -123,8 +123,8 @@ void testBasicSynchronization() {
     printTestHeader("Basic Synchronization", 
                    "Verify that all devices wait for the slowest device before proceeding to next phase");
     
-    SyncController controller;
-    controller.setTimeout(std::chrono::milliseconds(10000));
+    Syncorder syncorder;
+    syncorder.setTimeout(std::chrono::milliseconds(10000));
     
     // Device 타이밍 설정
     std::cout << "SETUP: Registering devices with different timing:\n";
@@ -133,15 +133,15 @@ void testBasicSynchronization() {
     std::cout << "  MediumRealsense: setup=400ms, warmup=600ms, start=200ms\n";
     std::cout << "\nEXPECTED BEHAVIOR: Each phase should wait for SlowTobii to complete\n";
     
-    controller.addDevice(std::make_unique<TimingTestDevice>(
+    syncorder.addDevice(std::make_unique<TimingTestDevice>(
         "FastCamera", std::chrono::milliseconds(100), 
         std::chrono::milliseconds(150), std::chrono::milliseconds(50)));
     
-    controller.addDevice(std::make_unique<TimingTestDevice>(
+    syncorder.addDevice(std::make_unique<TimingTestDevice>(
         "SlowTobii", std::chrono::milliseconds(800), 
         std::chrono::milliseconds(1200), std::chrono::milliseconds(300)));
     
-    controller.addDevice(std::make_unique<TimingTestDevice>(
+    syncorder.addDevice(std::make_unique<TimingTestDevice>(
         "MediumRealsense", std::chrono::milliseconds(400), 
         std::chrono::milliseconds(600), std::chrono::milliseconds(200)));
     
@@ -150,7 +150,7 @@ void testBasicSynchronization() {
     // Setup Phase
     std::cout << "\nEXECUTING: Setup Phase (expecting ~800ms)...\n";
     auto setup_start = std::chrono::steady_clock::now();
-    bool setup_ok = controller.executeSetup();
+    bool setup_ok = syncorder.executeSetup();
     auto setup_end = std::chrono::steady_clock::now();
     auto setup_duration = std::chrono::duration_cast<std::chrono::milliseconds>(setup_end - setup_start);
     
@@ -164,7 +164,7 @@ void testBasicSynchronization() {
     // Warmup Phase
     std::cout << "\nEXECUTING: Warmup Phase (expecting ~1200ms)...\n";
     auto warmup_start = std::chrono::steady_clock::now();
-    bool warmup_ok = controller.executeWarmup();
+    bool warmup_ok = syncorder.executeWarmup();
     auto warmup_end = std::chrono::steady_clock::now();
     auto warmup_duration = std::chrono::duration_cast<std::chrono::milliseconds>(warmup_end - warmup_start);
     
@@ -178,7 +178,7 @@ void testBasicSynchronization() {
     // Start Phase
     std::cout << "\nEXECUTING: Start Phase (expecting ~300ms)...\n";
     auto start_start = std::chrono::steady_clock::now();
-    bool start_ok = controller.executeStart();
+    bool start_ok = syncorder.executeStart();
     auto start_end = std::chrono::steady_clock::now();
     auto start_duration = std::chrono::duration_cast<std::chrono::milliseconds>(start_end - start_start);
     
@@ -204,8 +204,8 @@ void testExtremeTiming() {
     printTestHeader("Extreme Timing Difference", 
                    "Test synchronization with devices having very different execution times");
     
-    SyncController controller;
-    controller.setTimeout(std::chrono::milliseconds(15000));
+    Syncorder syncorder;
+    syncorder.setTimeout(std::chrono::milliseconds(15000));
     
     std::cout << "SETUP: Registering devices with extreme timing differences:\n";
     std::cout << "  UltraFast: setup=10ms, warmup=20ms, start=5ms     (total: 35ms)\n";
@@ -213,11 +213,11 @@ void testExtremeTiming() {
     std::cout << "\nTIMING RATIO: 171:1 difference between fastest and slowest\n";
     std::cout << "EXPECTED BEHAVIOR: UltraFast should wait for UltraSlow at each phase\n";
     
-    controller.addDevice(std::make_unique<TimingTestDevice>(
+    syncorder.addDevice(std::make_unique<TimingTestDevice>(
         "UltraFast", std::chrono::milliseconds(10), 
         std::chrono::milliseconds(20), std::chrono::milliseconds(5)));
     
-    controller.addDevice(std::make_unique<TimingTestDevice>(
+    syncorder.addDevice(std::make_unique<TimingTestDevice>(
         "UltraSlow", std::chrono::milliseconds(2000), 
         std::chrono::milliseconds(3000), std::chrono::milliseconds(1000)));
     
@@ -225,9 +225,9 @@ void testExtremeTiming() {
     
     std::cout << "\nEXECUTING: All phases...\n";
     bool success = true;
-    success &= controller.executeSetup();
-    success &= controller.executeWarmup();
-    success &= controller.executeStart();
+    success &= syncorder.executeSetup();
+    success &= syncorder.executeWarmup();
+    success &= syncorder.executeStart();
     
     auto total_end = std::chrono::steady_clock::now();
     auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start);
@@ -245,8 +245,8 @@ void testMultiDeviceConcurrency() {
     printTestHeader("Multi-Device Concurrency", 
                    "Test synchronization with multiple devices running in parallel");
     
-    SyncController controller;
-    controller.setTimeout(std::chrono::milliseconds(8000));
+    Syncorder syncorder;
+    syncorder.setTimeout(std::chrono::milliseconds(8000));
     
     // 5개의 서로 다른 타이밍 device
     struct DeviceSpec { std::string name; int setup; int warmup; int start; };
@@ -268,7 +268,7 @@ void testMultiDeviceConcurrency() {
                   << std::setw(8) << (std::to_string(dev.warmup) + "ms")
                   << std::setw(7) << (std::to_string(dev.start) + "ms") << "\n";
         
-        controller.addDevice(std::make_unique<TimingTestDevice>(
+        syncorder.addDevice(std::make_unique<TimingTestDevice>(
             dev.name, std::chrono::milliseconds(dev.setup),
             std::chrono::milliseconds(dev.warmup), std::chrono::milliseconds(dev.start)));
     }
@@ -280,9 +280,9 @@ void testMultiDeviceConcurrency() {
     
     std::cout << "\nEXECUTING: Multi-device parallel execution...\n";
     bool success = true;
-    success &= controller.executeSetup();
-    success &= controller.executeWarmup();
-    success &= controller.executeStart();
+    success &= syncorder.executeSetup();
+    success &= syncorder.executeWarmup();
+    success &= syncorder.executeStart();
     
     auto total_end = std::chrono::steady_clock::now();
     auto total_duration = std::chrono::duration_cast<std::chrono::milliseconds>(total_end - total_start);
@@ -309,17 +309,17 @@ void testPreciseSynchronization() {
     printTestHeader("Precise Synchronization", 
                    "Detailed verification of phase-by-phase synchronization timing");
     
-    SyncController controller;
-    controller.setTimeout(std::chrono::milliseconds(5000));
+    Syncorder syncorder;
+    syncorder.setTimeout(std::chrono::milliseconds(5000));
     
     std::cout << "SETUP: Two devices with precise timing control:\n";
     std::cout << "  Validator-1: setup=300ms, warmup=500ms, start=200ms\n";
     std::cout << "  Validator-2: setup=600ms, warmup=800ms, start=400ms  <-- REFERENCE\n";
     std::cout << "\nTEST METHOD: Measure each phase individually and verify timing\n";
     
-    controller.addDevice(std::make_unique<TimingTestDevice>("Validator-1", 
+    syncorder.addDevice(std::make_unique<TimingTestDevice>("Validator-1", 
         std::chrono::milliseconds(300), std::chrono::milliseconds(500), std::chrono::milliseconds(200)));
-    controller.addDevice(std::make_unique<TimingTestDevice>("Validator-2", 
+    syncorder.addDevice(std::make_unique<TimingTestDevice>("Validator-2", 
         std::chrono::milliseconds(600), std::chrono::milliseconds(800), std::chrono::milliseconds(400)));
     
     bool all_passed = true;
@@ -327,7 +327,7 @@ void testPreciseSynchronization() {
     // Setup Phase Verification
     std::cout << "\nEXECUTING: Setup Phase Measurement...\n";
     auto setup_start = std::chrono::steady_clock::now();
-    bool setup_ok = controller.executeSetup();
+    bool setup_ok = syncorder.executeSetup();
     auto setup_end = std::chrono::steady_clock::now();
     auto setup_duration = std::chrono::duration_cast<std::chrono::milliseconds>(setup_end - setup_start);
     
@@ -339,7 +339,7 @@ void testPreciseSynchronization() {
     // Warmup Phase Verification
     std::cout << "\nEXECUTING: Warmup Phase Measurement...\n";
     auto warmup_start = std::chrono::steady_clock::now();
-    bool warmup_ok = controller.executeWarmup();
+    bool warmup_ok = syncorder.executeWarmup();
     auto warmup_end = std::chrono::steady_clock::now();
     auto warmup_duration = std::chrono::duration_cast<std::chrono::milliseconds>(warmup_end - warmup_start);
     
@@ -351,7 +351,7 @@ void testPreciseSynchronization() {
     // Start Phase Verification
     std::cout << "\nEXECUTING: Start Phase Measurement...\n";
     auto start_start = std::chrono::steady_clock::now();
-    bool start_ok = controller.executeStart();
+    bool start_ok = syncorder.executeStart();
     auto start_end = std::chrono::steady_clock::now();
     auto start_duration = std::chrono::duration_cast<std::chrono::milliseconds>(start_end - start_start);
     
@@ -368,7 +368,7 @@ int main() {
     std::cout << "===========================================\n";
     std::cout << "SYNCORDER SYNCHRONIZATION TEST SUITE\n";
     std::cout << "===========================================\n";
-    std::cout << "OBJECTIVE: Verify that SyncController properly synchronizes\n";
+    std::cout << "OBJECTIVE: Verify that Syncorder properly synchronizes\n";
     std::cout << "           devices with different execution times\n";
     std::cout << "===========================================\n";
     
@@ -381,7 +381,7 @@ int main() {
         std::cout << "\n===========================================\n";
         std::cout << "TEST SUITE COMPLETED\n";
         std::cout << "===========================================\n";
-        std::cout << "CONCLUSION: SyncController successfully synchronizes devices\n";
+        std::cout << "CONCLUSION: Syncorder successfully synchronizes devices\n";
         std::cout << "            by waiting for the slowest device at each phase\n";
         std::cout << "            before proceeding to the next phase.\n";
         std::cout << "===========================================\n";
