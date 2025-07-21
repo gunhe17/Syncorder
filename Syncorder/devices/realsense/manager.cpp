@@ -69,8 +69,20 @@ public:
         return true;
     }
 
-    bool stop() override {return true;}
-    bool cleanup() override {return true;}
+    bool stop() override {
+        std::cout << "[RealsenseManager] Stopping broker and buffer...\n";
+        broker_->stop();   // Broker thread 정지
+        buffer_->stop();   // Buffer gate 닫기
+
+        return true;
+    }
+
+    bool cleanup() override {
+        broker_->cleanup();
+        device_->cleanup();
+
+        return true;
+    }
 
     std::string __name__() const override {
         return "Realsense";

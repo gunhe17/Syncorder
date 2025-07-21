@@ -68,8 +68,18 @@ public:
         return true;
     }
 
-    bool stop() override {return true;}
-    bool cleanup() override {return true;}
+    bool stop() override {
+        broker_->stop();
+        buffer_->stop();
+
+        return true;
+    }
+    bool cleanup() override {
+        // broker_->cleanup();
+        device_->cleanup();
+
+        return true;
+    }
 
     std::string __name__() const override {
         return "Tobii";
