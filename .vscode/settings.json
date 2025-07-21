@@ -1,4 +1,7 @@
 {
+    "files.exclude": {
+        "**/*.obj": true
+    },
     "files.associations": {
         "optional": "cpp",
         "algorithm": "cpp",
