@@ -3,6 +3,8 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <signal.h>
+#include <atomic>
 
 // local
 #include <Syncorder/gonfig/gonfig.h>
@@ -16,11 +18,20 @@
 #include <Syncorder/devices/realsense/manager.cpp>
 
 
+std::atomic<bool> should_exit{false};
+
+void signal_handler(int signal) {
+    should_exit = true;
+    std::cout << "\nShutdown signal received. Cleaning up...\n";
+}
+
 /**
  * @main
  */
 
 int main(int argc, char* argv[]) {
+    signal(SIGTERM, signal_handler);
+    signal(SIGINT, signal_handler);
     gonfig = Config::parseArgs(argc, argv);
 
     try {
@@ -75,11 +86,15 @@ int main(int argc, char* argv[]) {
          * ::Stop()
          */
         std::cout << "* Recording in progress (1 seconds)...\n";
-        for (int i = 1; i > 0; --i) {
+        for (int i = 1; i > 0 && !should_exit; --i) {
             std::cout << "  " << i << " seconds remaining...\r" << std::flush;
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         std::cout << "\n";
+        
+        if (should_exit) {
+            std::cout << "Recording interrupted by signal\n";
+        }
 
         std::cout << "Stopping recording...\n";
         syncorder.executeStop();
