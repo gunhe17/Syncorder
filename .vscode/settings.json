@@ -84,6 +84,7 @@
         "array": "cpp",
         "cassert": "cpp",
         "barrier": "cpp",
-        "any": "cpp"
+        "any": "cpp",
+        "csignal": "cpp"
     }
 }

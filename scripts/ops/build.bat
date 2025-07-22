@@ -12,6 +12,7 @@ cl ^
   /I "C:\Users\user\Workspace\TobiiPro\64\include" ^
   /I "C:\Users\user\Workspace\evk_sdk\include" ^
   /I "C:\Users\user\Workspace\Intel RealSense SDK 2.0\include" ^
+  /I "C:\Users\user\Workspace\Intel RealSense SDK 2.0\third-party" ^
   Syncorder\main.cpp ^
   Syncorder\gonfig\gonfig.cpp ^
   /Fe:bin\syncorder.exe ^

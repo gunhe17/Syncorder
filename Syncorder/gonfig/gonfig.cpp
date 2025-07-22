@@ -15,6 +15,8 @@ Config Config::parseArgs(int argc, char* argv[]) {
         
         if (arg == "--output_directory" && i + 1 < argc) {
             conf.output_directory = argv[++i];
+        } else if (arg == "--record_duration" && i + 1 < argc) {
+            conf.record_duration = std::stoi(argv[++i]);
         }
     }
     

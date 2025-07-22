@@ -10,7 +10,8 @@
                 "C:/Users/user/Workspace/TobiiPro/64/include",
                 "C:/Users/user/Workspace/evk_sdk/include",
                 "C:/Users/user/Workspace/evk_sdk/include/arducam",
-                "C:/Users/user/Workspace/Intel RealSense SDK 2.0/include"
+                "C:/Users/user/Workspace/Intel RealSense SDK 2.0/include",
+                "C:/Users/user/Workspace/Intel RealSense SDK 2.0/third-party"
             ],
             "defines": [
                 "_UNICODE",
