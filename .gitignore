@@ -11,3 +11,6 @@ desktop.ini
 
 # build
 *.obj
+
+# output
+output
