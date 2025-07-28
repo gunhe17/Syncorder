@@ -4,6 +4,7 @@ call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build
 cl ^
   /std:c++17 ^
   /EHsc ^
+  /MT ^
   /W3 ^
   /O2 ^
   /D_CRT_SECURE_NO_WARNINGS ^

@@ -58,38 +58,64 @@ public:
 
 private:
     void _onGaze(TobiiResearchGazeData* gaze_data) {
-        // flag
         if (!first_frame_received_.load()) first_frame_received_.store(true);
-
         if (!gaze_data || !buffer_) return;
 
-        bool left_valid = (gaze_data->left_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID);
-        bool right_valid = (gaze_data->right_eye.gaze_point.validity == TOBII_RESEARCH_VALIDITY_VALID);
-
-        double left_x = left_valid ? gaze_data->left_eye.gaze_point.position_on_display_area.x : -1.0;
-        double left_y = left_valid ? gaze_data->left_eye.gaze_point.position_on_display_area.y : -1.0;
-        double right_x = right_valid ? gaze_data->right_eye.gaze_point.position_on_display_area.x : -1.0;
-        double right_y = right_valid ? gaze_data->right_eye.gaze_point.position_on_display_area.y : -1.0;
-
-        int64_t timestamp = gaze_data->device_time_stamp;
-
         auto* tobii_buffer = static_cast<TobiiBuffer*>(buffer_);
-        TobiiBufferData data = _map(left_x, left_y, right_x, right_y, left_valid, right_valid, timestamp);
+        TobiiBufferData data = _map(gaze_data);
         tobii_buffer->enqueue(std::move(data));
     }
 
 private:
-    TobiiBufferData _map(
-        double left_x, double left_y,
-        double right_x, double right_y,
-        bool left_valid, bool right_valid,
-        int64_t timestamp
-    ) {
-        return TobiiBufferData(
-            left_x, left_y, right_x, right_y,
-            left_valid, right_valid,
-            std::chrono::system_clock::now(),
-            timestamp
-        );
+    TobiiBufferData _map(TobiiResearchGazeData* gaze_data) {
+        TobiiBufferData data = {};
+        
+        // timestamp
+        data.device_time_stamp = gaze_data->device_time_stamp;
+        data.system_time_stamp = gaze_data->system_time_stamp;
+        
+        // left gaze point
+        data.left_gaze_point_display_x = gaze_data->left_eye.gaze_point.position_on_display_area.x;
+        data.left_gaze_point_display_y = gaze_data->left_eye.gaze_point.position_on_display_area.y;
+        data.left_gaze_point_3d_x = gaze_data->left_eye.gaze_point.position_in_user_coordinates.x;
+        data.left_gaze_point_3d_y = gaze_data->left_eye.gaze_point.position_in_user_coordinates.y;
+        data.left_gaze_point_3d_z = gaze_data->left_eye.gaze_point.position_in_user_coordinates.z;
+        data.left_gaze_point_validity = gaze_data->left_eye.gaze_point.validity;
+
+        // right gaze point
+        data.right_gaze_point_display_x = gaze_data->right_eye.gaze_point.position_on_display_area.x;
+        data.right_gaze_point_display_y = gaze_data->right_eye.gaze_point.position_on_display_area.y;
+        data.right_gaze_point_3d_x = gaze_data->right_eye.gaze_point.position_in_user_coordinates.x;
+        data.right_gaze_point_3d_y = gaze_data->right_eye.gaze_point.position_in_user_coordinates.y;
+        data.right_gaze_point_3d_z = gaze_data->right_eye.gaze_point.position_in_user_coordinates.z;
+        data.right_gaze_point_validity = gaze_data->right_eye.gaze_point.validity;
+
+        // left gaze origin
+        data.left_gaze_origin_x = gaze_data->left_eye.gaze_origin.position_in_user_coordinates.x;
+        data.left_gaze_origin_y = gaze_data->left_eye.gaze_origin.position_in_user_coordinates.y;
+        data.left_gaze_origin_z = gaze_data->left_eye.gaze_origin.position_in_user_coordinates.z;
+        data.left_gaze_origin_validity = gaze_data->left_eye.gaze_origin.validity;
+
+        // right gaze origin
+        data.right_gaze_origin_x = gaze_data->right_eye.gaze_origin.position_in_user_coordinates.x;
+        data.right_gaze_origin_y = gaze_data->right_eye.gaze_origin.position_in_user_coordinates.y;
+        data.right_gaze_origin_z = gaze_data->right_eye.gaze_origin.position_in_user_coordinates.z;
+        data.right_gaze_origin_validity = gaze_data->right_eye.gaze_origin.validity;
+
+        // left pupil
+        data.left_pupil_diameter = gaze_data->left_eye.pupil_data.diameter;
+        data.left_pupil_validity = gaze_data->left_eye.pupil_data.validity;
+
+        // right pupil
+        data.right_pupil_diameter = gaze_data->right_eye.pupil_data.diameter;
+        data.right_pupil_validity = gaze_data->right_eye.pupil_data.validity;
+
+        // status
+        data.left_eye_detected = (data.left_gaze_point_validity == TOBII_RESEARCH_VALIDITY_VALID);
+        data.right_eye_detected = (data.right_gaze_point_validity == TOBII_RESEARCH_VALIDITY_VALID);
+        data.is_tracking = (data.left_eye_detected || data.right_eye_detected);
+        data.overall_validity = (data.left_eye_detected && data.right_eye_detected) ? TOBII_RESEARCH_VALIDITY_VALID : TOBII_RESEARCH_VALIDITY_INVALID;
+        
+        return data;
     }
 };

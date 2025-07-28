@@ -34,19 +34,22 @@ public:
 
         csv_.open(output_ + "tobii_data.csv");
         csv_
-            <<"left_x,"
-            <<"left_y,"
-            <<"right_x,"
-            <<"right_y,"
-            <<"left_valid,"
-            <<"right_valid,"
+            <<"left_gaze_display_x,"
+            <<"left_gaze_display_y,"
+            <<"right_gaze_display_x,"
+            <<"right_gaze_display_y,"
+            <<"left_gaze_validity,"
+            <<"right_gaze_validity,"
             <<"left_pupil_diameter,"
             <<"right_pupil_diameter,"
-            <<"left_pupil_valid,"
-            <<"right_pupil_valid,"
-            <<"sys_time_ms,"
-            <<"device_timestamp,"
-            <<"validity_flags\n";
+            <<"left_pupil_validity,"
+            <<"right_pupil_validity,"
+            <<"system_time_stamp,"
+            <<"device_time_stamp,"
+            <<"left_eye_detected,"
+            <<"right_eye_detected,"
+            <<"is_tracking,"
+            <<"overall_validity\n";
     }
     ~TobiiBroker() {}
 
@@ -63,19 +66,22 @@ protected:
 private:
     void _write(const TobiiBufferData& data) {
         csv_
-            << data.left_x_ << ","
-            << data.left_y_ << ","
-            << data.right_x_ << ","
-            << data.right_y_ << ","
-            << data.left_valid_ << ","
-            << data.right_valid_ << ","
-            << data.left_pupil_diameter_ << ","
-            << data.right_pupil_diameter_ << ","
-            << data.left_pupil_valid_ << ","
-            << data.right_pupil_valid_ << ","
-            << std::chrono::duration_cast<std::chrono::milliseconds>(data.sys_time_.time_since_epoch()).count() << ","
-            << data.device_timestamp_ << ","
-            << data.validity_flags_
+            << data.left_gaze_point_display_x << ","
+            << data.left_gaze_point_display_y << ","
+            << data.right_gaze_point_display_x << ","
+            << data.right_gaze_point_display_y << ","
+            << data.left_gaze_point_validity << ","
+            << data.right_gaze_point_validity << ","
+            << data.left_pupil_diameter << ","
+            << data.right_pupil_diameter << ","
+            << data.left_pupil_validity << ","
+            << data.right_pupil_validity << ","
+            << data.system_time_stamp << ","
+            << data.device_time_stamp << ","
+            << data.left_eye_detected << ","
+            << data.right_eye_detected << ","
+            << data.is_tracking << ","
+            << data.overall_validity
             << "\n";
     }
 };
