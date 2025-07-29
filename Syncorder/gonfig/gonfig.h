@@ -10,8 +10,10 @@
 
 class Config {
 public:
+    std::string output_path = "./output/";
+    std::string calibration_path = "./calibration.bin";
+
     int record_duration = 5;
-    std::string output_directory = "./output/";
 
     static Config parseArgs(int argc, char* argv[]);
 };

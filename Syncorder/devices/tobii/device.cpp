@@ -14,6 +14,7 @@
 #pragma comment(lib, "tobii_research.lib")
 
 // local
+#include <Syncorder/gonfig/gonfig.h>
 #include <Syncorder/error/exception.h>
 #include <Syncorder/devices/common/device_base.h>
 
@@ -119,7 +120,7 @@ private:
     
     void _loadCalibration() {
         // TODO: Config에서 경로 읽기
-        FILE* f = fopen("bin/calibration.bin", "rb");
+        FILE* f = fopen(gonfig.calibration_path.c_str(), "rb");
         if (!f) return;
 
         fseek(f, 0, SEEK_END);

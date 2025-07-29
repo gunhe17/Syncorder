@@ -28,7 +28,7 @@ private:
 
 public:
     TobiiBroker() {
-        output_ = gonfig.output_directory + "tobii/";
+        output_ = gonfig.output_path + "tobii/";
 
         std::filesystem::create_directories(output_);
 
