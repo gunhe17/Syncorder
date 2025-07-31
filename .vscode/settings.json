@@ -85,6 +85,14 @@
         "cassert": "cpp",
         "barrier": "cpp",
         "any": "cpp",
-        "csignal": "cpp"
+        "csignal": "cpp",
+        "bitset": "cpp",
+        "cstdarg": "cpp",
+        "numeric": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "stack": "cpp",
+        "unordered_set": "cpp",
+        "valarray": "cpp"
     }
 }
