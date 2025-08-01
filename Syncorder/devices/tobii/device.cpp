@@ -53,6 +53,8 @@ public:
     bool _setup() override {
         device_ = _createDevice();
 
+        _setFrequency();
+
         _loadDisplayArea();
         _loadCalibration();
         
@@ -102,6 +104,15 @@ private:
         tobii_research_free_eyetrackers(devices);
 
         return device;
+    }
+
+    void _setFrequency() {
+        TobiiResearchStatus status;
+
+        status = tobii_research_set_gaze_output_frequency(device_, 60.0f);
+        if (status != TOBII_RESEARCH_STATUS_OK) {
+            throw TobiiDeviceError("Failed to set frequency");
+        }
     }
     
     void _loadDisplayArea() {

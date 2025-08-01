@@ -2,11 +2,13 @@
 
 #include <algorithm>
 #include <thread>
+#include <filesystem>
 
 // installed
 #include <librealsense2/rs.hpp>
 
 // local
+#include <Syncorder/gonfig/gonfig.h>
 #include <Syncorder/error/exception.h>
 #include <Syncorder/devices/common/device_base.h>
 
@@ -22,11 +24,17 @@ private:
     
     void* callback_;
 
+    // *BAG
+    std::string bag_path_;
+
 public:
     RealsenseDevice(int device_id = 0)
     : 
         BDevice(device_id)
-    {}
+    {
+        auto unique = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        bag_path_ = gonfig.output_path + "realsense/" + std::to_string(unique) + ".bag";
+    }
     
     ~RealsenseDevice() {
         cleanup();
@@ -57,6 +65,9 @@ public:
     }
     
     bool _stop() override {
+        auto device = pipe_.get_active_profile().get_device();
+        if (auto recorder = device.as<rs2::recorder>()) recorder.pause();
+
         pipe_.stop();
 
         return true;
@@ -69,8 +80,11 @@ public:
 
 private:
     void _createConfig() {
-        config_.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 30);
-        config_.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+        config_.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_RGB8, 60);
+        config_.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 60);
+
+        std::filesystem::create_directories(std::filesystem::path(bag_path_).parent_path());
+        config_.enable_record_to_file(bag_path_);
     }
     
     void _validateDevice() {
@@ -92,6 +106,6 @@ private:
         }
         
         auto func = reinterpret_cast<void(*)(const rs2::frame&)>(callback_);
-        pipe_.start(func);
+        pipe_.start(config_, func);
     }
 };

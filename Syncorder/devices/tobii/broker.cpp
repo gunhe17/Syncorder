@@ -77,8 +77,6 @@ public:
 protected:
     void _process(const TobiiBufferData& data) override {
         _write(data);
-
-        std::cout << "[TobiiBroker] Processing gaze data\n";
     }
 
 private:

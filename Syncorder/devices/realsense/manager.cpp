@@ -71,8 +71,9 @@ public:
 
     bool stop() override {
         std::cout << "[RealsenseManager] Stopping broker and buffer...\n";
-        broker_->stop();   // Broker thread 정지
-        buffer_->stop();   // Buffer gate 닫기
+        device_->stop();
+        broker_->stop();
+        buffer_->stop();
 
         return true;
     }
